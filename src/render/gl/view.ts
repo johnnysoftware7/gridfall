@@ -6,7 +6,7 @@ import { canAct } from "../../engine/movement";
 import { cityAt, tileAt } from "../../engine/queries";
 import type { GameState, PlayerId } from "../../engine/types";
 import type { Camera } from "../iso";
-import { fx, hopAt } from "../fx";
+import { fx, hopAt, shakeOffset } from "../fx";
 import { buildBeacon, buildForest, buildMech, buildSpire } from "./mechs";
 import { factionAccent, glow, lambert, makeDarkEnv, metal, physical, terrainLook } from "./palette";
 
@@ -108,7 +108,7 @@ export function drawBoardGL(canvas: HTMLCanvasElement, state: GameState, cam: Ca
   const w = Math.max(1, r.width);
   const ht = Math.max(1, r.height);
   h.renderer.setSize(w, ht, false);
-  syncTiles(h, state, view.pid);
+  syncTiles(h, state, view);
   syncProps(h, state, view.pid);
   syncUnits(h, state, view);
   syncMarks(h, view);
@@ -152,10 +152,12 @@ function isoToGrid(cam: Camera): { x: number; y: number } {
 function aimCamera(h: Handle, cam: Camera, aspect: number, size: number): void {
   const g = isoToGrid(cam);
   look.set(g.x, 0, g.y);
-  const dist = 11 / Math.max(0.7, cam.zoom);
-  h.camera.position.set(look.x + dist * 1.15, dist * 0.78, look.z + dist * 1.15);
+  const punch = fx.punchZoom > 0 ? 1 + 0.05 * Math.min(1, fx.punchZoom) : 1;
+  const dist = 11 / Math.max(0.7, cam.zoom * punch);
+  const sh = shakeOffset(fx.now || 0);
+  h.camera.position.set(look.x + dist * 1.15 + sh.x, dist * 0.78, look.z + dist * 1.15 + sh.y);
   h.camera.lookAt(look);
-  const vh = (size < 13 ? 7.2 : 8.4) / Math.max(0.7, cam.zoom);
+  const vh = (size < 13 ? 7.2 : 8.4) / Math.max(0.7, cam.zoom * punch);
   h.camera.left = -vh * aspect * 0.5;
   h.camera.right = vh * aspect * 0.5;
   h.camera.top = vh * 0.5;
@@ -163,7 +165,8 @@ function aimCamera(h: Handle, cam: Camera, aspect: number, size: number): void {
   h.camera.updateProjectionMatrix();
 }
 
-function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
+function syncTiles(h: Handle, state: GameState, view: BoardView): void {
+  const pid = view.pid;
   if (h.size !== state.size || h.seed !== state.seed) {
     h.tiles.clear();
     h.tileMesh = [];
@@ -236,6 +239,15 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     if (cityHere && explored && !check) {
       capCol = mixHex(capCol, cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff", 0.18);
     }
+    const moving = view.moves.some((m) => m.x === x && m.y === y);
+    const striking = view.attacks.some((m) => m.x === x && m.y === y);
+    if (moving) {
+      side = mixHex(side, "#9b8ad4", 0.42);
+      capCol = mixHex(capCol, "#c4b4f0", 0.55);
+    } else if (striking) {
+      side = mixHex(side, "#c45a5a", 0.4);
+      capCol = mixHex(capCol, "#ff6a5a", 0.5);
+    }
     mat.color.set(side);
     const hgt = owned ? 1.08 : explored ? Math.max(0.92, lookT.h) : 1.0;
     mesh.scale.y = hgt;
@@ -304,7 +316,7 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital, city.level);
-      sp.scale.setScalar(city.isCapital ? 2.1 : 1.7);
+      sp.scale.setScalar(city.isCapital ? 1.65 : 1.35);
       sp.position.set(t.x - 0.18, lift, t.y - 0.18);
       h.props.add(sp);
       if (city.monument) {
@@ -362,7 +374,7 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
     const big = u.type === "titan" || u.type === "leviathan";
-    g.scale.setScalar(big ? 3.05 : 2.7);
+    g.scale.setScalar(big ? 2.35 : 2.05);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
     const toward = onCity ? 0.52 : 0.06;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
@@ -381,20 +393,9 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
 
 function syncMarks(h: Handle, view: BoardView): void {
   h.marks.clear();
-  const pulse = 0.55 + Math.sin((fx.now || 0) * 0.008) * 0.25;
-  for (const m of view.moves) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.05, 8, 24), glow("#4da3ff", 0.9 + pulse * 0.35));
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(m.x, 0.44, m.y);
-    h.marks.add(ring);
-  }
   for (const a of view.attacks) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.055, 8, 24), glow("#ff3040", 2));
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(a.x, 0.64, a.y);
-    h.marks.add(ring);
-    const bang = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 0), glow("#ff6a3a", 2.4));
-    bang.position.set(a.x, 0.92, a.y);
+    const bang = new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), glow("#ff6a3a", 2.2));
+    bang.position.set(a.x, 0.88, a.y);
     h.marks.add(bang);
   }
   if (view.hover) {
@@ -428,10 +429,12 @@ function syncFx(h: Handle): void {
       transparent: true,
       opacity: Math.max(0.55, a),
     });
-    const s = p.kind === "square" ? 0.34 : 0.1;
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mat);
+    const spark = p.kind === "spark";
+    const s = p.kind === "square" ? 0.34 : spark ? 0.06 : 0.1;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(spark ? 0.22 : s, s, s), mat);
     mesh.position.set(p.gx + p.x, Math.max(0.35, p.y), p.gy + p.z);
-    mesh.scale.setScalar(0.95 + a * 0.35);
+    if (spark) mesh.rotation.y = Math.atan2(p.vx, p.vz);
+    mesh.scale.setScalar(spark ? a : 0.95 + a * 0.35);
     h.fxg.add(mesh);
   }
 }
@@ -499,9 +502,12 @@ export function drawWorldUi(
     const p = projectTile(part.gx + part.x, part.gy + part.z, part.y + 0.35);
     if (!p || !part.text) continue;
     const a = Math.max(0, part.life / part.max);
-    ctx.globalAlpha = a;
+    const age = 1 - a;
+    const pop = age < 0.14 ? 1.4 - age * 2.8 : 1;
+    ctx.globalAlpha = age > 0.72 ? a : 1;
     const dmg = /^-?\d+$/.test(part.text);
-    ctx.font = part.kind === "skull" ? "bold 64px system-ui" : dmg ? "800 56px system-ui" : "bold 26px system-ui";
+    const base = part.kind === "skull" ? 64 : dmg ? 56 : 26;
+    ctx.font = `${part.kind === "skull" ? "bold" : dmg ? "800" : "bold"} ${Math.round(base * pop)}px system-ui`;
     ctx.strokeStyle = "rgba(0,0,0,0.75)";
     ctx.lineWidth = dmg || part.kind === "skull" ? 7 : 5;
     ctx.strokeText(part.text, p.x, p.y);

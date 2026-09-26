@@ -80,7 +80,7 @@ async function main() {
       const api = /** @type {any} */ (window).__GRIDFALL__;
       const g = api.state();
       const c = g.cities.find((x) => x.owner === 0 && x.isCapital) ?? g.cities[0];
-      const types = ["trooper", "skimmer", "marksman", "bulwark", "netrunner", "blade"];
+      const types = ["trooper", "skimmer", "marksman", "bulwark", "netrunner", "lancer"];
       const spots = [
         [2, 0], [0, 2], [2, 2], [-2, 1], [1, -2], [3, 1],
       ];
@@ -130,6 +130,17 @@ async function main() {
     });
     await page.waitForTimeout(700);
     await shot(page, "03-city-closeup.png");
+
+    await page.evaluate(() => {
+      const api = /** @type {any} */ (window).__GRIDFALL__;
+      const g = api.state();
+      const u = g.units.find((x) => x.type === "trooper") ?? g.units[0];
+      const TILE_W = 88;
+      const TILE_H = 44;
+      api.aim((u.x - u.y) * (TILE_W / 2), (u.x + u.y) * (TILE_H / 2), 2.15);
+    });
+    await page.waitForTimeout(500);
+    await shot(page, "06-unit-closeup.png");
 
     await page.evaluate(() => {
       const api = /** @type {any} */ (window).__GRIDFALL__;

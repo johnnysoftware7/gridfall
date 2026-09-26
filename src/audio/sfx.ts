@@ -96,16 +96,17 @@ export function playSfx(
 ): void {
   const a = ac(true);
   if (!a) return;
+  const pitch = 0.9 + Math.random() * 0.2;
   if (kind === "select") {
-    tone(a, 740, "triangle", 0.055, 0.008, 0.02, 0.08, a.destination, 220);
-    tone(a, 1180, "sine", 0.03, 0.01, 0.01, 0.07);
+    tone(a, 740 * pitch, "triangle", 0.055, 0.008, 0.02, 0.08, a.destination, 220);
+    tone(a, 1180 * pitch, "sine", 0.03, 0.01, 0.01, 0.07);
   } else if (kind === "move") {
-    tone(a, 196, "sine", 0.07, 0.01, 0.04, 0.1, a.destination, 90);
-    tone(a, 392, "triangle", 0.035, 0.02, 0.03, 0.09, a.destination, 40);
+    tone(a, 196 * pitch, "sine", 0.07, 0.01, 0.04, 0.1, a.destination, 90);
+    tone(a, 392 * pitch, "triangle", 0.035, 0.02, 0.03, 0.09, a.destination, 40);
   } else if (kind === "attack") {
     noiseBurst(a, 0.11, 0.14, 420, 1.6);
-    tone(a, 110, "sawtooth", 0.09, 0.004, 0.03, 0.16, a.destination, -50);
-    tone(a, 58, "square", 0.04, 0.002, 0.02, 0.12);
+    tone(a, 110 * pitch, "sawtooth", 0.09, 0.004, 0.03, 0.16, a.destination, -50);
+    tone(a, 58 * pitch, "square", 0.04, 0.002, 0.02, 0.12);
   } else if (kind === "harvest") {
     tone(a, 523, "sine", 0.06, 0.01, 0.04, 0.14);
     tone(a, 784, "triangle", 0.045, 0.03, 0.05, 0.16);

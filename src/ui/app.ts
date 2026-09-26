@@ -13,7 +13,7 @@ import { computeScore, finalScore, scoreBreakdown } from "../engine/score";
 import type { Command, Difficulty, FactionId, GameMode, GameState, LevelUpReward, PlayerId, TechId, Unit } from "../engine/types";
 import { drawBoard, drawStarfield, focusCapital, pickBoard, projectTile } from "../render/board";
 import { paintHeroScene, paintMedal } from "../render/gl/hero";
-import { burst, floatText, fx, killMark, punch, startHop, tickFx } from "../render/fx";
+import { addTrauma, burst, floatText, fx, hitStop, killMark, punch, punchIn, sparks, startHop, tickFx } from "../render/fx";
 import { iso, type Camera } from "../render/iso";
 
 export interface UiState {
@@ -82,6 +82,12 @@ export function mount(el: HTMLElement): void {
 
 function tick(now: number): void {
   if ((window as unknown as { __GRIDFALL_FREEZE?: boolean }).__GRIDFALL_FREEZE) {
+    requestAnimationFrame(tick);
+    return;
+  }
+  if (fx.hitStop > 0) {
+    tickFx(16);
+    if (ui.screen === "game" || ui.screen === "tech") paintBoard();
     requestAnimationFrame(tick);
     return;
   }
@@ -413,6 +419,10 @@ function juice(cmd: Command, g: GameState): void {
         const pv = previewUnits(g, a, t);
         if (pv.defenderDies) killMark(t.x, t.y);
         floatText(t.x, t.y, `-${pv.attackResult}`, "#ff6b3a");
+        sparks(t.x, t.y, t.x - a.x, t.y - a.y, pv.defenderDies ? 15 : 12);
+        hitStop(pv.defenderDies ? 100 : 55);
+        addTrauma(pv.defenderDies ? 0.35 : 0.15);
+        if (pv.defenderDies) punchIn();
         const city = cityAt(g, a.x, a.y);
         if (city && city.owner === 0) floatText(city.x, city.y, "+XP", "#7ecbff");
       }
