@@ -256,3 +256,24 @@ Close the gaps named in Cycle 10. Brand stays REBOOT. Engine / rules / HUD uncha
 **Why this is not 9.0:** The remaining hole is the unit close-up. Futuretopia `4b`/`5` are dark articulated metal creatures with limbs that read as animals. Ours read as dark geometric vehicles — distinct classes, visible visors, some splayed legs — but SwiftShader + board-scale ortho still crush hip/knee/shin into a pad. Widening the models further merged neighbors into one grey blob (tried, reverted). Night-rim glass on the spire is real in the mesh and in pixel samples, but the freeze-frame still photographs as pale modernist towers on white plates.
 
 ---
+
+## Cycle 12 — 2026-09-26 (creatures + night-rim)
+
+Close the Cycle 11 leftover: unit menagerie + spire photography. Checker and combat square storm left untouched.
+
+**Play notes (art-pass 01–05 vs `4b_combat_closeup` / `5_city_closeup`):**
+- Units are dark capsule creatures, not hex pads or hover discs. Close-up stills show a quadruped, a leaping raptor with pincers, an upright marksman, a heavy biped, a six-leg spider, and a scorpion — white knee joints, faction visor eyes, limbs that stay separate from neighbors.
+- Novagrid photographs as near-black glass shafts with teal floor bands on the white owned checker. White EdgesGeometry on storeys is gone, so the freeze-frame no longer washes to a pale cake.
+- Checker and orange square storm are unchanged from Cycle 11.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 9.0 | Honest vs the attached Futuretopia stills. The four named leftovers are closed: black/white cubes, orange square storm, dark clustered spire, articulated dark menagerie that wins a board-scale side-by-side. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. |
+| Fun | 8.7 | Combat juice unchanged. |
+
+**Shipped:** capsule-limb class builders (beast / leaper / biped marksman / heavy / beetle / horn / spider / hulk / wraith / scorpion); near-black glass towers without white storey rims; thicker limbs at scale 2.7 so they read on black tiles without merging. `artifacts/reboot-gameplay.mp4` refreshed.
+
+**Residual vs `4b`/`5` (not a 9.0 blocker):** Futuretopia close-ups still have lumpier sculpted hull plates and crystal wreckage. Ours are cleaner capsule mechs — same sport, less organic mass. Further lumping starts to fuse neighbors again.
+
+---

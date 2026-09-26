@@ -79,8 +79,8 @@ function mats(faction: FactionId, color: string) {
   const tint = iceTint(faction);
   return {
     accent,
-    hull: lit("#2e343c"),
-    dark: lit("#14181c"),
+    hull: lit("#3a424a"),
+    dark: lit("#1a1e24"),
     plate: lit(color),
     visor: lit(accent),
     ice: ice(tint, accent, 0.4),
@@ -140,22 +140,22 @@ export function buildMech(type: UnitType, faction: FactionId, color: string): TH
 
 function beastLeg(g: THREE.Group, m: M, x: number, z: number, s: number, side: number, thick = 1): void {
   const t = s * thick;
-  g.add(ball(0.032 * t, m.hull, x, 0.24 * s, z));
-  const thigh = cap(0.026 * t, 0.11 * s, m.dark, x + side * 0.07 * s, 0.16 * s, z + 0.02, 0.75, side * 0.5);
+  g.add(ball(0.04 * t, m.hull, x, 0.26 * s, z));
+  const thigh = cap(0.034 * t, 0.13 * s, m.dark, x + side * 0.08 * s, 0.17 * s, z + 0.02, 0.75, side * 0.5);
   rim(thigh);
   g.add(thigh);
-  g.add(ball(0.022 * t, m.rim, x + side * 0.11 * s, 0.09 * s, z + 0.04));
-  g.add(cap(0.02 * t, 0.09 * s, m.dark, x + side * 0.12 * s, 0.045 * s, z + 0.055, 0.2, 0));
-  g.add(ball(0.024 * t, m.hull, x + side * 0.12 * s, 0.016, z + 0.07));
+  g.add(ball(0.028 * t, m.rim, x + side * 0.13 * s, 0.1 * s, z + 0.04));
+  g.add(cap(0.026 * t, 0.1 * s, m.dark, x + side * 0.14 * s, 0.05 * s, z + 0.06, 0.22, 0));
+  g.add(ball(0.03 * t, m.hull, x + side * 0.14 * s, 0.018, z + 0.08));
 }
 
 function pincer(g: THREE.Group, m: M, x: number, y: number, z: number, s: number, side: number, reach = 1): void {
-  g.add(ball(0.028 * s, m.hull, x, y, z));
-  const upper = cap(0.022 * s, 0.1 * s * reach, m.dark, x + side * 0.08 * reach, y - 0.01 * s, z + 0.04 * reach, 0.95, side * 0.55);
+  g.add(ball(0.034 * s, m.hull, x, y, z));
+  const upper = cap(0.028 * s, 0.11 * s * reach, m.dark, x + side * 0.09 * reach, y - 0.01 * s, z + 0.04 * reach, 0.95, side * 0.55);
   rim(upper);
   g.add(upper);
-  g.add(ball(0.02 * s, m.rim, x + side * 0.14 * reach, y - 0.04 * s, z + 0.08 * reach));
-  g.add(cap(0.016 * s, 0.07 * s * reach, m.hull, x + side * 0.17 * reach, y - 0.05 * s, z + 0.12 * reach, 1.05, side * 0.2));
+  g.add(ball(0.024 * s, m.rim, x + side * 0.15 * reach, y - 0.04 * s, z + 0.08 * reach));
+  g.add(cap(0.02 * s, 0.08 * s * reach, m.hull, x + side * 0.18 * reach, y - 0.05 * s, z + 0.13 * reach, 1.05, side * 0.2));
 }
 
 function eyes(g: THREE.Group, m: M, x: number, y: number, z: number, s: number): void {
@@ -165,11 +165,11 @@ function eyes(g: THREE.Group, m: M, x: number, y: number, z: number, s: number):
 
 function quadruped(g: THREE.Group, m: M, scale: number): void {
   const s = scale;
-  const body = cap(0.055 * s, 0.14 * s, m.hull, 0, 0.28 * s, 0.01, Math.PI / 2, 0);
+  const body = cap(0.07 * s, 0.18 * s, m.hull, 0, 0.32 * s, 0.01, Math.PI / 2, 0);
   rim(body);
   g.add(body);
-  g.add(ball(0.05 * s, m.dark, 0, 0.3 * s, 0.12 * s));
-  eyes(g, m, 0, 0.3 * s, 0.17 * s, s);
+  g.add(ball(0.062 * s, m.dark, 0, 0.34 * s, 0.14 * s));
+  eyes(g, m, 0, 0.34 * s, 0.2 * s, s);
   for (const [sx, sz] of [[-1, 0.08], [1, 0.08], [-1, -0.07], [1, -0.07]] as const) {
     beastLeg(g, m, sx * 0.07 * s, sz * s, s, sx);
   }
@@ -247,19 +247,19 @@ function wedge(g: THREE.Group, m: M): void {
 }
 
 function spider(g: THREE.Group, m: M): void {
-  g.add(ball(0.07, m.hull, 0, 0.22, 0));
-  g.add(ball(0.045, m.dark, 0, 0.24, 0.08));
-  eyes(g, m, 0, 0.24, 0.12, 0.85);
+  g.add(ball(0.085, m.hull, 0, 0.24, 0));
+  g.add(ball(0.055, m.dark, 0, 0.26, 0.09));
+  eyes(g, m, 0, 0.26, 0.14, 0.9);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2 + 0.25;
-    const x = Math.cos(a) * 0.07;
-    const z = Math.sin(a) * 0.07;
-    g.add(ball(0.02, m.hull, x, 0.2, z));
-    const thigh = cap(0.016, 0.12, m.dark, x * 1.7, 0.13, z * 1.7, 0.85, Math.cos(a) * 0.5);
+    const x = Math.cos(a) * 0.08;
+    const z = Math.sin(a) * 0.08;
+    g.add(ball(0.024, m.hull, x, 0.22, z));
+    const thigh = cap(0.02, 0.13, m.dark, x * 1.7, 0.14, z * 1.7, 0.85, Math.cos(a) * 0.5);
     rim(thigh);
     g.add(thigh);
-    g.add(ball(0.016, m.rim, x * 2.2, 0.06, z * 2.2));
-    g.add(ball(0.018, m.hull, x * 2.4, 0.016, z * 2.4));
+    g.add(ball(0.02, m.rim, x * 2.15, 0.065, z * 2.15));
+    g.add(ball(0.022, m.hull, x * 2.35, 0.016, z * 2.35));
   }
 }
 

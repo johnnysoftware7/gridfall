@@ -362,7 +362,7 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
     const big = u.type === "titan" || u.type === "leviathan";
-    g.scale.setScalar(big ? 2.55 : 2.2);
+    g.scale.setScalar(big ? 3.05 : 2.7);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
     const toward = onCity ? 0.52 : 0.06;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
