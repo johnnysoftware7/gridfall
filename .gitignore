@@ -1,0 +1,24 @@
+# Reference assets (Polytopia screenshots/video — never ship)
+reference/
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+playwright-report/
+test-results/
+blob-report/
+
+# Env / OS
+.env
+.env.local
+.DS_Store
+*.log
+.vite/
+
+# Coverage
+coverage/
+
+# Playwright
+playwright/.cache/
