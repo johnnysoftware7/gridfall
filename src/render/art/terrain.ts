@@ -17,12 +17,10 @@ export function drawTile(
   terrain: Terrain,
   edge: boolean,
 ): void {
-  if (edge) {
-    if (terrain === "shelf" || terrain === "deep") {
-      thickness(ctx, x, y, "#0b3a58", "#0e4a6e", 14);
-    } else {
-      thickness(ctx, x, y, "#4a3420", "#6a4a28", 16);
-    }
+  if (terrain === "shelf" || terrain === "deep") {
+    thickness(ctx, x, y, "#0b3a58", "#0e4a6e", edge ? 16 : 11);
+  } else {
+    thickness(ctx, x, y, "#3a2818", "#5a3c20", edge ? 18 : 12);
   }
   let fill = TERRAIN_FILL[terrain];
   if (terrain === "plain") fill = shade(x, y, "#6db05c", "#88c46f");
@@ -30,15 +28,21 @@ export function drawTile(
   if (terrain === "ridge") fill = shade(x, y, "#7d828c", "#9aa0aa");
   if (terrain === "shelf") fill = shade(x, y, "#2eb8d4", "#5ad4ea");
   if (terrain === "deep") fill = shade(x, y, "#155e88", "#1f7aa8");
-  diamond(ctx, x, y, fill, "rgba(0,0,0,0.08)");
-  if (terrain === "shelf") {
+  diamond(ctx, x, y, fill, "rgba(0,0,0,0.12)");
+  if (terrain === "shelf" || terrain === "deep") {
     const p = iso(x, y);
-    ctx.strokeStyle = "rgba(255,255,255,0.22)";
-    ctx.lineWidth = 1.2;
+    const t = typeof performance !== "undefined" ? performance.now() : 0;
+    const wave = 0.1 + Math.sin(t * 0.003 + x * 0.9 + y * 0.7) * 0.08;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.04, wave);
+    ctx.strokeStyle = terrain === "deep" ? "#9be8ff" : "#e8ffff";
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(p.x - 16, p.y);
-    ctx.lineTo(p.x, p.y - 8);
+    ctx.moveTo(p.x - 18, p.y + 2);
+    ctx.lineTo(p.x - 2, p.y - 8);
+    ctx.lineTo(p.x + 14, p.y);
     ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -48,46 +52,30 @@ function shade(x: number, y: number, a: string, b: string): string {
 
 export function drawFog(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const p = iso(x, y);
+  const t = typeof performance !== "undefined" ? performance.now() : 0;
+  const pulse = 0.16 + Math.sin(t * 0.0016 + x * 0.4 + y * 0.3) * 0.04;
   ctx.save();
-  ctx.translate(p.x, p.y - 8);
-  // raised white holographic block (scanlines, slight cyan)
-  ctx.globalAlpha = 0.92;
-  ctx.fillStyle = "#eef6ff";
+  ctx.globalAlpha = 0.22 + pulse;
+  diamond(ctx, x, y, "rgba(8, 28, 48, 0.55)", "rgba(80, 220, 255, 0.28)");
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = "rgba(120, 230, 255, 0.35)";
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 5]);
   ctx.beginPath();
-  ctx.moveTo(0, -18);
-  ctx.lineTo(22, -6);
-  ctx.lineTo(0, 6);
-  ctx.lineTo(-22, -6);
+  ctx.moveTo(p.x, p.y - TILE_H / 2);
+  ctx.lineTo(p.x + TILE_W / 2, p.y);
+  ctx.lineTo(p.x, p.y + TILE_H / 2);
+  ctx.lineTo(p.x - TILE_W / 2, p.y);
   ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#c5d4e4";
-  ctx.beginPath();
-  ctx.moveTo(-22, -6);
-  ctx.lineTo(0, 6);
-  ctx.lineTo(0, 16);
-  ctx.lineTo(-22, 4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = "#d8e4f0";
-  ctx.beginPath();
-  ctx.moveTo(22, -6);
-  ctx.lineTo(0, 6);
-  ctx.lineTo(0, 16);
-  ctx.lineTo(22, 4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = "#7fd7ff";
-  for (let i = -14; i < 8; i += 3) {
-    ctx.fillRect(-18, i, 36, 1.2);
-  }
+  ctx.stroke();
   ctx.restore();
 }
 
 export function drawResource(ctx: CanvasRenderingContext2D, x: number, y: number, kind: string): void {
   const p = iso(x, y);
   ctx.save();
-  ctx.translate(p.x, p.y - 6);
+  ctx.translate(p.x, p.y - 8);
+  ctx.scale(1.25, 1.25);
   if (kind === "spore") {
     ctx.fillStyle = "#c6ff4a";
     blob(ctx, -4, 0, 5);
@@ -169,9 +157,12 @@ export function drawRidge(ctx: CanvasRenderingContext2D, x: number, y: number): 
 
 export function drawForest(ctx: CanvasRenderingContext2D, x: number, y: number, color: string): void {
   const p = iso(x, y);
+  const t = typeof performance !== "undefined" ? performance.now() : 0;
   ctx.save();
   ctx.translate(p.x, p.y);
-  for (const [dx, dy, h, w] of [[-8, 4, 16, 5], [4, 6, 20, 6], [10, 2, 12, 4]] as const) {
+  ctx.shadowColor = "rgba(80,255,180,0.55)";
+  ctx.shadowBlur = 8 + Math.sin(t * 0.004 + x) * 3;
+  for (const [dx, dy, h, w] of [[-10, 5, 20, 6], [2, 7, 26, 7], [11, 3, 16, 5]] as const) {
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(dx, dy);
@@ -179,8 +170,8 @@ export function drawForest(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.lineTo(dx + w, dy);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = "rgba(80,255,200,0.45)";
-    ctx.fillRect(dx + w / 2 - 1, dy - h, 2, 5);
+    ctx.fillStyle = "rgba(120,255,210,0.55)";
+    ctx.fillRect(dx + w / 2 - 1, dy - h, 2, 6);
   }
   ctx.restore();
 }
@@ -214,9 +205,11 @@ export function drawFence(ctx: CanvasRenderingContext2D, x: number, y: number, c
   ];
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.6;
-  ctx.setLineDash([5, 4]);
-  ctx.globalAlpha = 0.9;
+  ctx.lineWidth = 2.2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 7;
+  ctx.setLineDash([5, 3]);
+  ctx.globalAlpha = 0.95;
   for (let i = 0; i < 4; i++) {
     if (!edges[i]) continue;
     const a = pts[i];

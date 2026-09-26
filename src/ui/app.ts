@@ -2,16 +2,19 @@ import { FACTIONS, FACTION_ORDER } from "../data/factions";
 import { TECH_LIST, canResearch, techCost, techDef } from "../data/techs";
 import { UNITS, unitDef } from "../data/units";
 import { chooseCommands, runAiTurn } from "../ai/choose";
+import { playSfx, setSfx } from "../audio/sfx";
 import { SAVE_KEY } from "../data/constants";
 import { createGame } from "../engine/createGame";
 import { dispatch, legalTileActions } from "../engine/actions";
+import { previewUnits } from "../engine/combat";
 import { canAct, legalAttacks, legalMoves } from "../engine/movement";
 import { cityAt, cityCount, cityIncome, current, playerIncome, tileAt, unitAt } from "../engine/queries";
 import { computeScore, finalScore } from "../engine/score";
 import type { Command, Difficulty, FactionId, GameMode, GameState, LevelUpReward, PlayerId, TechId, Unit } from "../engine/types";
 import { drawHelmetMedallion } from "../render/art/helmets";
-import { drawBoard, focusCapital } from "../render/board";
-import { pickTile, type Camera } from "../render/iso";
+import { drawBoard, drawStarfield, focusCapital } from "../render/board";
+import { burst, floatText, fx, punch, tickFx } from "../render/fx";
+import { iso, pickTile, type Camera } from "../render/iso";
 
 export interface UiState {
   screen: "faction" | "setup" | "game" | "tech" | "stats" | "settings" | "end";
@@ -27,6 +30,9 @@ export interface UiState {
   selectedTile: { x: number; y: number } | null;
   music: boolean;
   sfx: boolean;
+  hover: { x: number; y: number } | null;
+  coached: boolean;
+  banner: string;
 }
 
 const ui: UiState = {
@@ -42,33 +48,43 @@ const ui: UiState = {
   selected: null,
   selectedTile: null,
   music: false,
-  sfx: false,
+  sfx: true,
+  hover: null,
+  coached: false,
+  banner: "",
 };
 
 let appEl: HTMLElement;
 let dragging = false;
 let last = { x: 0, y: 0 };
 let pinch = 0;
+const camGoal: Camera = { x: 0, y: 0, zoom: 2.2 };
 
 export function mount(el: HTMLElement): void {
   appEl = el;
-  const saved = localStorage.getItem(SAVE_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved) as { game: GameState; ui: Partial<UiState> };
-      if (parsed.game && !parsed.game.over) {
-        ui.game = parsed.game;
-        ui.screen = "game";
-        ui.cam = focusCapital(parsed.game, 0);
-      }
-    } catch { /* ignore */ }
-  }
   render();
   window.addEventListener("keydown", onKey);
   window.addEventListener("resize", () => {
-    if (ui.screen === "game" || ui.screen === "tech") paint();
+    if (ui.screen === "game" || ui.screen === "tech") paintBoard();
   });
+  requestAnimationFrame(tick);
   expose();
+}
+
+function tick(now: number): void {
+  fx.now = now;
+  tickFx(16);
+  if (!dragging) {
+    ui.cam.x += (camGoal.x - ui.cam.x) * 0.14;
+    ui.cam.y += (camGoal.y - ui.cam.y) * 0.14;
+    ui.cam.zoom += (camGoal.zoom - ui.cam.zoom) * 0.1;
+  } else {
+    camGoal.x = ui.cam.x;
+    camGoal.y = ui.cam.y;
+    camGoal.zoom = ui.cam.zoom;
+  }
+  if (ui.screen === "game" || ui.screen === "tech") paintBoard();
+  requestAnimationFrame(tick);
 }
 
 function render(): void {
@@ -86,6 +102,7 @@ function renderFaction(): void {
       <div class="sub">Regular Factions</div>
       <div class="medals"></div>
       <canvas class="landscape"></canvas>
+      <div id="resume-slot"></div>
     </div>`;
   const medals = appEl.querySelector(".medals")!;
   for (const id of FACTION_ORDER) {
@@ -101,6 +118,23 @@ function renderFaction(): void {
     b.onclick = () => { ui.faction = id; ui.screen = "setup"; render(); };
   }
   paintLandscape(appEl.querySelector(".landscape") as HTMLCanvasElement);
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as { game: GameState };
+      if (parsed.game && !parsed.game.over) {
+        const slot = appEl.querySelector("#resume-slot")!;
+        slot.innerHTML = `<button class="play-btn" id="resume" style="position:absolute;left:50%;bottom:18%;transform:translateX(-50%);z-index:3">Resume drop</button>`;
+        slot.querySelector("#resume")!.addEventListener("click", () => {
+          ui.game = parsed.game;
+          ui.screen = "game";
+          ui.cam = focusCapital(parsed.game, 0);
+          playSfx("ui");
+          render();
+        });
+      }
+    } catch { /* ignore */ }
+  }
 }
 
 function paintLandscape(c: HTMLCanvasElement): void {
@@ -190,10 +224,14 @@ function startGame(): void {
     difficulty: ui.difficulty,
   });
   ui.cam = focusCapital(ui.game, 0);
-  ui.selected = null;
+  Object.assign(camGoal, ui.cam);
+  const startU = ui.game.units.find((u) => u.owner === 0);
+  ui.selected = startU?.id ?? null;
+  ui.coached = false;
   ui.screen = "game";
   save();
   render();
+  showBanner("GRIDFALL", FACTIONS[ui.faction].name, 1200);
 }
 
 function renderGameShell(): void {
@@ -204,6 +242,8 @@ function renderGameShell(): void {
     <div class="hud-br" id="br"></div>
     <div id="sel"></div>
     <div class="toast-stack" id="toasts"></div>
+    <div class="coach" id="coach" hidden></div>
+    <div class="turn-banner" id="tbanner"></div>
     <div id="overlay"></div>
     <div id="modal"></div>`;
   bindCanvas();
@@ -218,15 +258,19 @@ function bindCanvas(): void {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   });
   c.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - last.x;
-    const dy = e.clientY - last.y;
-    if (Math.abs(dx) + Math.abs(dy) > 2) {
-      ui.cam.x -= dx / ui.cam.zoom;
-      ui.cam.y -= dy / ui.cam.zoom;
-      last = { x: e.clientX, y: e.clientY };
-      paint();
+    if (dragging) {
+      const dx = e.clientX - last.x;
+      const dy = e.clientY - last.y;
+      if (Math.abs(dx) + Math.abs(dy) > 2) {
+        ui.cam.x -= dx / ui.cam.zoom;
+        ui.cam.y -= dy / ui.cam.zoom;
+        last = { x: e.clientX, y: e.clientY };
+      }
+      return;
     }
+    if (!ui.game) return;
+    const rect = c.getBoundingClientRect();
+    ui.hover = pickTile(e.clientX - rect.left, e.clientY - rect.top, ui.cam, rect.width, rect.height, ui.game.size);
   });
   c.addEventListener("pointerup", (e) => {
     const dx = e.clientX - last.x;
@@ -236,7 +280,9 @@ function bindCanvas(): void {
   });
   c.addEventListener("wheel", (e) => {
     e.preventDefault();
-    ui.cam.zoom = Math.min(2.2, Math.max(0.45, ui.cam.zoom * (e.deltaY > 0 ? 0.92 : 1.08)));
+    const z = Math.min(2.85, Math.max(0.7, ui.cam.zoom * (e.deltaY > 0 ? 0.92 : 1.08)));
+    ui.cam.zoom = z;
+    camGoal.zoom = z;
     paint();
   }, { passive: false });
   c.addEventListener("touchstart", (e) => {
@@ -279,16 +325,28 @@ function onTap(cx: number, cy: number): void {
   if (unit && (!unit.hidden || unit.owner === 0)) {
     ui.selected = unit.id;
     ui.selectedTile = { x: tile.x, y: tile.y };
+    playSfx("select");
   } else {
     ui.selected = null;
     ui.selectedTile = { x: tile.x, y: tile.y };
   }
-  paint();
+  paintChrome();
 }
 
 function apply(cmd: Command): void {
   if (!ui.game) return;
+  const before = ui.game;
+  const exploredBefore = before.players[0].explored.slice();
+  const scoreBefore = computeScore(before, 0);
+  juice(cmd, before);
   ui.game = dispatch(ui.game, cmd);
+  flashExplored(exploredBefore, ui.game);
+  const scoreAfter = computeScore(ui.game, 0);
+  if (scoreAfter > scoreBefore) {
+    const u = ui.game.units.find((unit) => unit.owner === 0);
+    if (u) floatText(u.x, u.y, `+${scoreAfter - scoreBefore}`, "#ffe14a");
+  }
+  if (cmd.type === "move" || cmd.type === "harvest" || cmd.type === "train") ui.coached = true;
   if (ui.game.pendingLevelUp && ui.game.currentPlayer === 0) {
     paint();
     return;
@@ -297,12 +355,86 @@ function apply(cmd: Command): void {
     ui.game = dispatch(ui.game, { type: "levelUp", reward: ui.game.pendingLevelUp.options[0] });
   }
   if (cmd.type === "endTurn") {
+    showBanner(`TURN ${ui.game.turn}`, "Rivals moving…");
     runAis();
     save();
+    if (!ui.game.over) showBanner(`TURN ${ui.game.turn}`, FACTIONS[ui.game.players[0].faction].name, 1400);
   }
   if (ui.game.over) ui.screen = "end";
   paint();
   if (ui.screen === "end") render();
+}
+
+function flashExplored(before: boolean[], after: GameState): void {
+  const exp = after.players[0].explored;
+  const size = after.size;
+  let n = 0;
+  for (let i = 0; i < exp.length && n < 12; i++) {
+    if (exp[i] && !before[i]) {
+      const x = i % size;
+      const y = Math.floor(i / size);
+      burst(x, y, "#7ffff6", 5);
+      n++;
+    }
+  }
+  if (n > 0) {
+    const u = after.units.find((unit) => unit.owner === 0);
+    if (u) floatText(u.x, u.y, `SCOUT +${n}`, "#7ffff6");
+  }
+}
+
+function juice(cmd: Command, g: GameState): void {
+  if (cmd.type === "move") {
+    playSfx("move");
+    burst(cmd.x, cmd.y, "#7ffff6", 8);
+    ui.coached = true;
+    const dest = iso(cmd.x, cmd.y);
+    camGoal.x = dest.x;
+    camGoal.y = dest.y;
+  } else if (cmd.type === "attack" || cmd.type === "convert") {
+    playSfx("attack");
+    const t = g.units.find((u) => u.id === cmd.targetId);
+    if (t) {
+      const a = g.units.find((u) => u.id === cmd.unitId);
+      if (a) {
+        const pv = previewUnits(g, a, t);
+        floatText(t.x, t.y, `-${pv.attackResult}`, "#ff6b6b");
+      }
+      burst(t.x, t.y, "#ff4d4d", 14);
+    }
+    punch(7);
+  } else if (cmd.type === "harvest" || cmd.type === "harvestStarfish") {
+    playSfx("harvest");
+    burst(cmd.x, cmd.y, "#c6ff4a", 10);
+    floatText(cmd.x, cmd.y, "+farm", "#c6ff4a");
+  } else if (cmd.type === "train") {
+    playSfx("train");
+    const city = g.cities.find((c) => c.id === cmd.cityId);
+    if (city) burst(city.x, city.y, "#ffe14a", 10);
+  } else if (cmd.type === "research") {
+    playSfx("research");
+  } else if (cmd.type === "capture") {
+    playSfx("capture");
+    const u = g.units.find((x) => x.id === cmd.unitId);
+    if (u) {
+      burst(u.x, u.y, "#ffe14a", 16);
+      floatText(u.x, u.y, "CLAIMED", "#ffe14a");
+    }
+    punch(6);
+  } else if (cmd.type === "endTurn") {
+    playSfx("end");
+  }
+}
+
+function showBanner(title: string, sub = "", ms = 900): void {
+  ui.banner = title;
+  const el = appEl.querySelector("#tbanner");
+  if (!el) return;
+  el.className = "turn-banner on";
+  el.innerHTML = `${title}${sub ? `<small>${sub}</small>` : ""}`;
+  window.setTimeout(() => {
+    el.classList.remove("on");
+  }, ms);
 }
 
 function runAis(): void {
@@ -325,23 +457,44 @@ function pickAiReward(opts: LevelUpReward[]): LevelUpReward {
 }
 
 function paint(): void {
+  paintBoard();
+  paintChrome();
+}
+
+function paintBoard(): void {
   if (!ui.game) return;
   const c = appEl.querySelector("#board") as HTMLCanvasElement | null;
   if (!c) return;
   const r = appEl.getBoundingClientRect();
-  c.width = r.width * devicePixelRatio;
-  c.height = r.height * devicePixelRatio;
+  const w = Math.max(1, Math.floor(r.width * devicePixelRatio));
+  const h = Math.max(1, Math.floor(r.height * devicePixelRatio));
+  if (c.width !== w || c.height !== h) {
+    c.width = w;
+    c.height = h;
+  }
   const ctx = c.getContext("2d")!;
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   const sel = ui.selected ? ui.game.units.find((u) => u.id === ui.selected) : undefined;
   const moves = sel && sel.owner === 0 ? legalMoves(ui.game, sel) : [];
   const attacks = sel && sel.owner === 0 ? legalAttacks(ui.game, sel).map((t) => ({ x: t.x, y: t.y })) : [];
-  drawBoard(ctx, ui.game, ui.cam, { pid: 0, selected: ui.selected ?? undefined, moves, attacks });
+  drawBoard(ctx, ui.game, ui.cam, {
+    pid: 0,
+    selected: ui.selected ?? undefined,
+    moves,
+    attacks,
+    hover: ui.hover,
+  });
+}
+
+function paintChrome(): void {
+  if (!ui.game) return;
+  const sel = ui.selected ? ui.game.units.find((u) => u.id === ui.selected) : undefined;
   paintHud();
   paintSelect(sel);
   paintToasts();
   paintOverlay();
   paintModal();
+  paintCoach();
 }
 
 function paintHud(): void {
@@ -362,12 +515,28 @@ function paintHud(): void {
       <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap">Settings</div></button>
       <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap">Game Stats</div></button>
       <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap">Tech Tree</div></button>
-      <button class="round-btn" id="endturn"><div class="disc">✓</div><div class="cap">End Turn</div></button>`;
+      <button class="round-btn ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap">End Turn</div></button>`;
     br.querySelectorAll("[data-go]").forEach((b) => {
       b.addEventListener("click", () => { ui.screen = b.getAttribute("data-go") as UiState["screen"]; paint(); });
     });
     br.querySelector("#endturn")!.addEventListener("click", () => apply({ type: "endTurn" }));
   }
+}
+
+function idleReady(): boolean {
+  if (!ui.game || ui.game.currentPlayer !== 0) return false;
+  return !ui.game.units.some((u) => u.owner === 0 && canAct(u));
+}
+
+function paintCoach(): void {
+  const el = appEl.querySelector("#coach") as HTMLElement | null;
+  if (!el || !ui.game) return;
+  if (ui.coached || ui.game.turn > 1 || ui.screen !== "game") {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.innerHTML = `<b>First drop.</b> Tap a cyan ring to step · <b>T</b> tech · <b>E</b> end turn.`;
 }
 
 function rankOf(g: GameState, pid: PlayerId): string {
@@ -382,9 +551,16 @@ function paintSelect(sel?: Unit): void {
   if (sel) {
     const d = unitDef(sel.type);
     const fac = FACTIONS[ui.game.players[sel.owner].faction];
+    const atks = sel.owner === 0 ? legalAttacks(ui.game, sel) : [];
+    const canMove = sel.owner === 0 && legalMoves(ui.game, sel).length > 0;
     const hint = sel.owner === 0
-      ? (legalAttacks(ui.game, sel).length ? "Pick a red marker to attack." : canAct(sel) ? "Pick a light tile to move." : "This unit has acted.")
+      ? (atks.length ? "Tap a pulsing red ! to strike." : canMove ? "Tap a glowing cyan tile to move." : "Acted — End Turn when ready.")
       : `${d.name}`;
+    const preview = atks.slice(0, 2).map((t) => {
+      const pv = previewUnits(ui.game!, sel, t);
+      const td = unitDef(t.type);
+      return `<div class="battle-preview"><strong>${td.name}</strong> · deal ${pv.attackResult} · take ${pv.defenseResult}${pv.defenderDies ? " · KO" : ""}</div>`;
+    }).join("");
     const acts = sel.owner === 0 ? unitButtons(sel) : "";
     box.innerHTML = `
       <div class="sel-card" data-unit="${sel.id}">
@@ -392,6 +568,7 @@ function paintSelect(sel?: Unit): void {
         <div class="namebar" style="background:${fac.color}">${d.name}<span>${Math.ceil(sel.hp)}/${sel.maxHp}</span></div>
         <div class="hpbar"><i style="width:${(sel.hp / sel.maxHp) * 100}%"></i></div>
         <div class="hint">${hint}</div>
+        ${preview}
         <div class="sel-actions">${acts}</div>
       </div>`;
     box.querySelectorAll("[data-cmd]").forEach((b) => {
@@ -507,11 +684,18 @@ function paintOverlay(): void {
   }
   if (ui.screen === "settings") {
     el.innerHTML = `<div class="overlay" data-screen="settings"><button class="back-arrow" id="back">‹</button><div class="panel"><h3>Settings</h3>
-      <div class="row">Music <button class="chip ${ui.music ? "on" : ""}" id="m">stub</button></div>
-      <div class="row">SFX <button class="chip ${ui.sfx ? "on" : ""}" id="s">stub</button></div>
+      <div class="row">Music <button class="chip ${ui.music ? "on" : ""}" id="m">${ui.music ? "on" : "off"}</button></div>
+      <div class="row">SFX <button class="chip ${ui.sfx ? "on" : ""}" id="s">${ui.sfx ? "on" : "off"}</button></div>
       <button class="play-btn" id="resign">Resign</button>
     </div></div>`;
     el.querySelector("#back")!.addEventListener("click", () => { ui.screen = "game"; paint(); });
+    el.querySelector("#m")!.addEventListener("click", () => { ui.music = !ui.music; paintChrome(); });
+    el.querySelector("#s")!.addEventListener("click", () => {
+      ui.sfx = !ui.sfx;
+      setSfx(ui.sfx);
+      if (ui.sfx) playSfx("ui");
+      paintChrome();
+    });
     el.querySelector("#resign")!.addEventListener("click", () => { localStorage.removeItem(SAVE_KEY); ui.game = null; ui.screen = "faction"; render(); });
     return;
   }
@@ -526,8 +710,20 @@ function paintTechTree(c: HTMLCanvasElement): void {
   c.height = r.height * devicePixelRatio;
   const ctx = c.getContext("2d")!;
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#061018";
   ctx.fillRect(0, 0, r.width, r.height);
+  for (let i = 0; i < 5; i++) {
+    const gx = (r.width / 6) * (i + 1);
+    const gy = r.height * (0.25 + (i % 2) * 0.35);
+    const grd = ctx.createRadialGradient(gx, gy, 10, gx, gy, 180);
+    grd.addColorStop(0, "rgba(40, 140, 180, 0.22)");
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 180, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  drawStarfield(ctx, r.width, r.height, g.seed + 9, true);
   const cx = r.width / 2;
   const cy = r.height / 2 + 10;
   const cities = cityCount(g, 0);
@@ -553,19 +749,27 @@ function paintTechTree(c: HTMLCanvasElement): void {
     const open = canResearch(p.techs, id);
     const cost = techCost(t.tier, cities, literacy);
     ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
     ctx.fillStyle = have ? "#3db85a" : open ? "#3d8cff" : "#2a2a2a";
+    if (open && !have) {
+      ctx.shadowColor = "#3d8cff";
+      ctx.shadowBlur = 16;
+    }
     ctx.fill();
+    ctx.shadowBlur = 0;
     if (open && !have) {
       ctx.fillStyle = "#fff";
-      ctx.font = "bold 12px system-ui";
+      ctx.font = "bold 13px system-ui";
       ctx.textAlign = "center";
       ctx.fillText(String(cost), x, y + 4);
     }
     ctx.fillStyle = "#fff";
-    ctx.font = "12px system-ui";
+    ctx.font = "bold 13px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText(t.name, x, y + 34);
+    ctx.fillText(t.name, x, y + 36);
+    ctx.fillStyle = "rgba(200,220,230,0.8)";
+    ctx.font = "11px system-ui";
+    ctx.fillText(t.unlocks.split("·")[0].trim(), x, y + 50);
     const hit = document.createElement("div");
     void hit;
   }
@@ -575,7 +779,7 @@ function paintTechTree(c: HTMLCanvasElement): void {
     const y = e.clientY - rect.top;
     for (const id of TECH_LIST) {
       const pnt = pos[id];
-      if ((x - pnt.x) ** 2 + (y - pnt.y) ** 2 < 22 ** 2) {
+      if ((x - pnt.x) ** 2 + (y - pnt.y) ** 2 < 26 ** 2) {
         if (canResearch(p.techs, id)) apply({ type: "research", tech: id });
       }
     }
@@ -607,6 +811,20 @@ function placeBranch(out: Record<TechId, { x: number; y: number }>, root: TechId
   });
 }
 
+function levelLabel(o: LevelUpReward): string {
+  const map: Record<LevelUpReward, string> = {
+    workshop: "Workshop (+1⚡)",
+    explorer: "Explorer burst",
+    wall: "Walls (×4 defence)",
+    stars: "+5 Energy",
+    pop: "Population +3",
+    border: "Expand border",
+    park: "Park (+score)",
+    titan: "Deploy Titan",
+  };
+  return map[o] ?? o;
+}
+
 function paintModal(): void {
   const el = appEl.querySelector("#modal");
   if (!el || !ui.game) return;
@@ -614,7 +832,7 @@ function paintModal(): void {
     const city = ui.game.cities.find((c) => c.id === ui.game!.pendingLevelUp!.cityId);
     el.innerHTML = `<div class="modal" data-screen="levelup"><div class="box">
       <h3>${city?.name ?? "Colony"} leveled up</h3>
-      ${ui.game.pendingLevelUp.options.map((o) => `<button data-r="${o}">${o}</button>`).join("")}
+      ${ui.game.pendingLevelUp.options.map((o) => `<button data-r="${o}">${levelLabel(o)}</button>`).join("")}
     </div></div>`;
     el.querySelectorAll("button").forEach((b) => {
       b.addEventListener("click", () => apply({ type: "levelUp", reward: b.getAttribute("data-r") as LevelUpReward }));
@@ -626,9 +844,13 @@ function paintModal(): void {
 
 function renderEnd(): void {
   const g = ui.game!;
-  appEl.innerHTML = `<div class="end-screen" data-screen="end"><h2 style="text-align:center;margin-top:80px">GRIDFALL</h2>
+  const ranked = g.players.map((p) => ({ p, s: finalScore(g, p.id) })).sort((a, b) => b.s - a.s);
+  const win = ranked[0];
+  const youWin = win.p.id === 0;
+  appEl.innerHTML = `<div class="end-screen" data-screen="end"><h2 style="text-align:center;margin-top:72px">GRIDFALL</h2>
+    <div class="end-hero">${youWin ? "ORBIT SECURED" : "SIGNAL LOST"} · ${FACTIONS[win.p.faction].name}</div>
     <div class="panel" style="max-width:480px;margin:24px auto;padding:20px">
-      ${g.players.map((p) => `<div class="row"><span>${FACTIONS[p.faction].name}</span><span>${finalScore(g, p.id)}</span></div>`).join("")}
+      ${ranked.map((r, i) => `<div class="row"><span>${i + 1}. ${FACTIONS[r.p.faction].name}${r.p.id === 0 ? " (you)" : ""}</span><span>${r.s}</span></div>`).join("")}
       <button class="play-btn" id="again">Again</button>
     </div></div>`;
   appEl.querySelector("#again")!.addEventListener("click", () => {
@@ -655,6 +877,7 @@ function save(): void {
 }
 
 function expose(): void {
+  setSfx(ui.sfx);
   (window as unknown as { __GRIDFALL__: unknown }).__GRIDFALL__ = {
     ui,
     start: (opts?: Partial<typeof ui>) => {

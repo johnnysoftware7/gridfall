@@ -6,17 +6,26 @@ import type { GameState, PlayerId } from "../engine/types";
 import { drawFence, drawFog, drawForest, drawResource, drawRidge, drawRoad, drawRuin, drawTile } from "./art/terrain";
 import { drawSpire } from "./art/helmets";
 import { drawUnit } from "./art/units";
+import { drawFx, fx } from "./fx";
 import { diamond, iso, type Camera } from "./iso";
 
-export function drawStarfield(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number): void {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < 120; i++) {
+export function drawStarfield(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number, skipBg = false): void {
+  const t = fx.now || (typeof performance !== "undefined" ? performance.now() : 0);
+  if (!skipBg) {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#02040c");
+    g.addColorStop(0.55, "#000");
+    g.addColorStop(1, "#031018");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  for (let i = 0; i < 180; i++) {
     const x = ((seed * 17 + i * 97) % 1000) / 1000 * w;
     const y = ((seed * 31 + i * 53) % 1000) / 1000 * h;
-    const a = 0.25 + ((i * 13) % 70) / 100;
-    ctx.fillStyle = `rgba(255,255,255,${a})`;
-    ctx.fillRect(x, y, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1);
+    const tw = 0.35 + Math.sin(t * 0.002 + i) * 0.25 + ((i * 13) % 70) / 140;
+    ctx.fillStyle = i % 11 === 0 ? `rgba(140,220,255,${tw})` : `rgba(255,255,255,${tw})`;
+    const s = i % 9 === 0 ? 2.2 : 1;
+    ctx.fillRect(x, y, s, s);
   }
 }
 
@@ -24,13 +33,21 @@ export function drawBoard(
   ctx: CanvasRenderingContext2D,
   state: GameState,
   cam: Camera,
-  view: { pid: PlayerId; selected?: string; moves: { x: number; y: number }[]; attacks: { x: number; y: number }[] },
+  view: {
+    pid: PlayerId;
+    selected?: string;
+    moves: { x: number; y: number }[];
+    attacks: { x: number; y: number }[];
+    hover?: { x: number; y: number } | null;
+  },
 ): void {
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
   drawStarfield(ctx, w, h, state.seed);
+  const ox = fx.shake ? (Math.random() - 0.5) * fx.shake : 0;
+  const oy = fx.shake ? (Math.random() - 0.5) * fx.shake : 0;
   ctx.save();
-  ctx.translate(w / 2 - cam.x * cam.zoom, h / 2 - cam.y * cam.zoom);
+  ctx.translate(w / 2 - cam.x * cam.zoom + ox, h / 2 - cam.y * cam.zoom + oy);
   ctx.scale(cam.zoom, cam.zoom);
 
   const p = state.players.find((pl) => pl.id === view.pid)!;
@@ -46,6 +63,12 @@ export function drawBoard(
     const t = tileAt(state, x, y)!;
     const last = x === state.size - 1 || y === state.size - 1;
     drawTile(ctx, x, y, t.terrain, last);
+    if (!p.explored[y * state.size + x]) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      diamond(ctx, x, y, "#041018", undefined);
+      ctx.restore();
+    }
   }
 
   for (const { x, y } of order) {
@@ -58,6 +81,15 @@ export function drawBoard(
     }
     if (t.ruin) drawRuin(ctx, x, y);
     if (t.resource && (resourceVisible(state, view.pid, t.resource))) {
+      const ip = iso(x, y);
+      const pulse = 0.35 + Math.sin((fx.now || 0) * 0.008 + x) * 0.2;
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 230, 80, ${pulse})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(ip.x, ip.y + 4, 12, 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
       drawResource(ctx, x, y, t.resource);
     }
     if (t.building === "dock") drawDock(ctx, x, y);
@@ -88,8 +120,20 @@ export function drawBoard(
     drawFence(ctx, x, y, col, edges);
   }
 
+  const pulse = 0.38 + Math.sin((fx.now || 0) * 0.007) * 0.18;
   for (const m of view.moves) {
-    diamond(ctx, m.x, m.y, "rgba(255,255,255,0.28)", "rgba(255,255,255,0.7)");
+    diamond(ctx, m.x, m.y, `rgba(80,255,245,${pulse})`, "#b8ffff");
+    const ip = iso(m.x, m.y);
+    ctx.save();
+    ctx.strokeStyle = `rgba(180,255,255,${0.55 + pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(ip.x, ip.y, 16, 8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  if (view.hover) {
+    diamond(ctx, view.hover.x, view.hover.y, "rgba(255,255,255,0.12)", "rgba(255,255,255,0.85)");
   }
 
   for (const { x, y } of order) {
@@ -99,6 +143,21 @@ export function drawBoard(
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const pt = iso(x, y);
       drawSpire(ctx, fac?.id ?? "helix", pt.x, pt.y, city.isCapital, fac?.color ?? "#bbb");
+    }
+  }
+
+  if (view.selected) {
+    const su = state.units.find((u) => u.id === view.selected);
+    if (su) {
+      const ip = iso(su.x, su.y);
+      ctx.save();
+      ctx.strokeStyle = "#7ffff6";
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.ellipse(ip.x, ip.y + 6, 22, 10, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -118,17 +177,23 @@ export function drawBoard(
 
   for (const a of view.attacks) {
     const ip = iso(a.x, a.y);
+    const bounce = Math.sin((fx.now || 0) * 0.01) * 2;
+    ctx.save();
+    ctx.shadowColor = "#ff3040";
+    ctx.shadowBlur = 12;
     ctx.fillStyle = "#e22424";
     ctx.beginPath();
-    ctx.arc(ip.x, ip.y - 36, 13, 0, Math.PI * 2);
+    ctx.arc(ip.x, ip.y - 40 + bounce, 15, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.4;
     ctx.stroke();
+    ctx.shadowBlur = 0;
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 16px system-ui";
+    ctx.font = "bold 18px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText("!", ip.x, ip.y - 31);
+    ctx.fillText("!", ip.x, ip.y - 34 + bounce);
+    ctx.restore();
   }
 
   for (const { x, y } of order) {
@@ -147,7 +212,12 @@ export function drawBoard(
     drawCityLabel(ctx, state, c.id, view.pid);
   }
 
+  drawFx(ctx);
   ctx.restore();
+  if (fx.flash > 0) {
+    ctx.fillStyle = `rgba(255,240,210,${fx.flash * 0.35})`;
+    ctx.fillRect(0, 0, w, h);
+  }
   void TILE_W;
   void TILE_H;
   void chebyshev;
@@ -261,7 +331,7 @@ function drawOutpostLabel(ctx: CanvasRenderingContext2D, x: number, y: number): 
 
 export function focusCapital(state: GameState, pid: PlayerId): Camera {
   const c = state.cities.find((x) => x.owner === pid && x.isCapital) ?? state.cities.find((x) => x.owner === pid);
-  if (!c) return { x: 0, y: 0, zoom: 1.45 };
+  if (!c) return { x: 0, y: 0, zoom: 2.15 };
   const p = iso(c.x, c.y);
-  return { x: p.x, y: p.y, zoom: 1.55 };
+  return { x: p.x, y: p.y, zoom: 2.2 };
 }

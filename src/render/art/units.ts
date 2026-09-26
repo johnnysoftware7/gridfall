@@ -13,16 +13,20 @@ export function drawUnit(
 ): void {
   const p = iso(x, y);
   ctx.save();
-  ctx.translate(p.x, p.y - 14);
-  ctx.scale(1.25, 1.25);
+  ctx.translate(p.x, p.y - 16);
+  ctx.scale(1.42, 1.42);
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(0, 16, 13, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
   if (opts.hidden) ctx.globalAlpha = 0.35;
   if (opts.glow) {
     ctx.shadowColor = "#5ef6ff";
-    ctx.shadowBlur = 14;
-    ctx.strokeStyle = "#5ef6ff";
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = "#7ffff6";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(0, 10, 16, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 12, 17, 8, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
   }
@@ -32,15 +36,22 @@ export function drawUnit(
   } else {
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(-11, 12);
-    ctx.lineTo(-8, -2);
-    ctx.lineTo(8, -2);
-    ctx.lineTo(11, 12);
+    ctx.moveTo(-12, 13);
+    ctx.lineTo(-9, -3);
+    ctx.lineTo(9, -3);
+    ctx.lineTo(12, 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = shade(color, 0.55);
+    ctx.beginPath();
+    ctx.moveTo(-6, 13);
+    ctx.lineTo(0, 2);
+    ctx.lineTo(6, 13);
     ctx.closePath();
     ctx.fill();
     ctx.fillStyle = shade(color, 0.75);
     ctx.fillRect(-7, 2, 14, 6);
-    drawHelmet(ctx, faction, 0, -10, 1);
+    drawHelmet(ctx, faction, 0, -11, 1.08);
     if (type === "marksman") {
       ctx.fillStyle = "#222";
       ctx.fillRect(8, -6, 10, 2);

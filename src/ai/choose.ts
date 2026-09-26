@@ -182,7 +182,7 @@ function pickMove(state: GameState, u: Unit): Command | null {
     for (const c of state.cities) {
       if (c.owner !== null) continue;
       const d = Math.max(Math.abs(c.x - m.x), Math.abs(c.y - m.y));
-      s += 10 / (d + 1);
+      s += 16 / (d + 1);
     }
     // explore
     const p = state.players.find((pl) => pl.id === u.owner)!;
@@ -195,7 +195,7 @@ function pickMove(state: GameState, u: Unit): Command | null {
         if (!p.explored[ny * state.size + nx]) fog++;
       }
     }
-    s += fog * 2;
+    s += fog * 4.5;
     if (tile?.terrain === "ridge") s += 1;
     if (!best || s > best.s) best = { x: m.x, y: m.y, s };
   }
@@ -216,8 +216,8 @@ function bestTrain(state: GameState, _cityId: string): UnitType | null {
     if (d.tech && !playerHas(state, p.id, d.tech)) continue;
     if (p.energy < d.cost) continue;
     let s = d.attack * 2 + d.movement + (threatened ? d.defense * 2 : 0) - d.cost;
-    if (t === "trooper") s += 3;
-    if (t === "skimmer") s += 4;
+    if (t === "trooper") s += cityCount(state, p.id) <= 2 ? 6 : 3;
+    if (t === "skimmer") s += 5;
     if (t === "marksman") s += 2;
     if (best === null || s > best.s) best = { t, s };
   }

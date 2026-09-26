@@ -140,6 +140,8 @@ export function drawSpire(ctx: CanvasRenderingContext2D, faction: FactionId, x: 
   ctx.closePath();
   ctx.fill();
   if (capital) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 18;
     ctx.fillStyle = "#f5d76e";
     ctx.beginPath();
     ctx.moveTo(0, -46);
@@ -147,6 +149,7 @@ export function drawSpire(ctx: CanvasRenderingContext2D, faction: FactionId, x: 
     ctx.lineTo(-5, -38);
     ctx.closePath();
     ctx.fill();
+    ctx.shadowBlur = 0;
   }
   void faction;
   ctx.restore();
