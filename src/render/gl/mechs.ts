@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { FactionId, UnitType } from "../../engine/types";
-import { factionAccent, glow, ice, iceTint, lambert, metal } from "./palette";
+import { factionAccent, glow, ice, iceTint, metal } from "./palette";
 
 const RIM = new THREE.LineBasicMaterial({ color: "#e8f0f8" });
 
@@ -79,14 +79,15 @@ function mats(faction: FactionId, color: string) {
   const tint = iceTint(faction);
   return {
     accent,
-    hull: lambert("#6a727c", "#1a2028", 0.08),
-    dark: lambert("#3a4048", "#0c1014", 0.05),
-    plate: lambert(color, accent, 0.1),
+    hull: lit("#8a929c"),
+    dark: lit("#3e444c"),
+    plate: lit(color),
     visor: lit(accent),
     ice: ice(tint, accent, 0.4),
     core: lit(accent),
     shard: lit(tint),
     glow: glow(accent, 1.7),
+    rim: lit("#e8eef6"),
   };
 }
 
@@ -104,11 +105,13 @@ function shadow(g: THREE.Group, r = 0.22): void {
 
 function fade(g: THREE.Group, opacity: number): void {
   g.traverse((c) => {
-    if (c instanceof THREE.Mesh && (c.material instanceof THREE.MeshPhysicalMaterial || c.material instanceof THREE.MeshLambertMaterial)) {
-      c.material = c.material.clone();
-      c.material.transparent = true;
-      c.material.opacity = opacity;
-    }
+    if (!(c instanceof THREE.Mesh) || !c.material) return;
+    const src = Array.isArray(c.material) ? c.material[0] : c.material;
+    if (!src || !("opacity" in src)) return;
+    const mat = src.clone();
+    mat.transparent = true;
+    mat.opacity = opacity;
+    c.material = mat;
   });
 }
 
@@ -135,131 +138,194 @@ export function buildMech(type: UnitType, faction: FactionId, color: string): TH
   return g;
 }
 
+function leg(g: THREE.Group, m: M, x: number, z: number, s: number, flare: number): void {
+  g.add(ball(0.032 * s, m.hull, x, 0.14 * s, z));
+  const thigh = cap(0.028 * s, 0.1 * s, m.dark, x + flare * 0.04, 0.09 * s, z, 0.45, flare * 0.35);
+  rim(thigh);
+  g.add(thigh);
+  g.add(ball(0.026 * s, m.hull, x + flare * 0.07, 0.055 * s, z + 0.02));
+  g.add(cap(0.024 * s, 0.08 * s, m.dark, x + flare * 0.08, 0.035 * s, z + 0.04, 0.2, 0));
+  g.add(box(0.055 * s, 0.022 * s, 0.07 * s, m.hull, x + flare * 0.08, 0.018, z + 0.06));
+}
+
 function quadruped(g: THREE.Group, m: M, scale: number): void {
-  const body = facet(0.11 * scale, m.hull, 0, 0.16 * scale, 0.02, 1.55, 0.7, 1.15);
+  const s = scale;
+  const body = facet(0.13 * s, m.hull, 0, 0.18 * s, 0.02, 1.7, 0.75, 1.25);
   rim(body);
   g.add(body);
-  g.add(facet(0.07 * scale, m.dark, 0, 0.18 * scale, 0.1, 1.1, 0.65, 0.8));
-  g.add(box(0.08 * scale, 0.03 * scale, 0.04 * scale, m.visor, 0, 0.19 * scale, 0.16 * scale));
-  for (const [sx, sz] of [[-1, 0.08], [1, 0.08], [-1, -0.08], [1, -0.08]] as const) {
-    const leg = cap(0.028 * scale, 0.1 * scale, m.dark, sx * 0.1 * scale, 0.08 * scale, sz * scale, 0.35, sx * 0.25);
-    g.add(leg);
-    g.add(ball(0.03 * scale, m.hull, sx * 0.12 * scale, 0.03, sz * scale + 0.04));
+  const head = facet(0.07 * s, m.dark, 0, 0.22 * s, 0.14 * s, 1.05, 0.75, 0.95);
+  rim(head);
+  g.add(head);
+  g.add(box(0.1 * s, 0.04 * s, 0.05 * s, m.visor, 0, 0.22 * s, 0.2 * s));
+  g.add(box(0.06 * s, 0.016 * s, 0.02 * s, m.rim, 0, 0.22 * s, 0.23 * s));
+  for (const [sx, sz] of [[-1, 0.1], [1, 0.1], [-1, -0.09], [1, -0.09]] as const) {
+    leg(g, m, sx * 0.12 * s, sz * s, s, sx);
   }
-  g.add(octa(0.04 * scale, m.core, 0, 0.24 * scale, -0.04, 0.8, 1.2, 0.7));
+  g.add(octa(0.045 * s, m.core, 0, 0.28 * s, -0.06, 0.8, 1.3, 0.7));
+}
+
+function arm(g: THREE.Group, m: M, x: number, y: number, z: number, s: number, flare: number, reach = 1): void {
+  g.add(ball(0.034 * s, m.hull, x, y, z));
+  const upper = cap(0.026 * s, 0.11 * s * reach, m.dark, x + flare * 0.07 * reach, y - 0.02 * s, z + 0.02, 0.85, flare * 0.55);
+  rim(upper);
+  g.add(upper);
+  g.add(ball(0.028 * s, m.hull, x + flare * 0.13 * reach, y - 0.06 * s, z + 0.05 * reach));
+  g.add(box(0.05 * s, 0.03 * s, 0.08 * s, m.plate, x + flare * 0.18 * reach, y - 0.08 * s, z + 0.1 * reach));
 }
 
 function hoverDisc(g: THREE.Group, m: M): void {
-  const pad = facet(0.16, m.hull, 0, 0.06, 0, 1.35, 0.28, 1.05);
+  const pad = facet(0.18, m.hull, 0, 0.1, 0, 1.45, 0.32, 1.15);
   rim(pad);
   g.add(pad);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.016, 8, 18), m.visor);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.02, 8, 20), m.visor);
   ring.rotation.x = Math.PI / 2;
-  ring.position.y = 0.05;
+  ring.position.y = 0.08;
   g.add(ring);
-  g.add(facet(0.08, m.dark, 0, 0.14, 0.02, 1.1, 0.7, 0.9));
-  g.add(box(0.07, 0.025, 0.04, m.visor, 0, 0.15, 0.1));
+  const cabin = facet(0.09, m.dark, 0, 0.2, 0.03, 1.15, 0.75, 0.95);
+  rim(cabin);
+  g.add(cabin);
+  g.add(box(0.09, 0.03, 0.05, m.visor, 0, 0.21, 0.14));
+  g.add(box(0.05, 0.012, 0.02, m.rim, 0, 0.21, 0.17));
+  for (const sx of [-1, 1] as const) {
+    arm(g, m, sx * 0.14, 0.12, 0.04, 0.95, sx, 1.15);
+  }
+  g.add(cap(0.02, 0.1, m.dark, 0, 0.06, -0.16, 1.1, 0));
 }
 
 function gunbed(g: THREE.Group, m: M, barrel: number): void {
-  const chassis = box(0.22, 0.08, 0.16, m.hull, 0, 0.1, 0);
+  const chassis = box(0.28, 0.1, 0.2, m.hull, 0, 0.12, 0);
   rim(chassis);
   g.add(chassis);
-  g.add(box(0.14, 0.06, 0.12, m.dark, 0, 0.16, -0.02));
-  const gun = cap(0.02, barrel, m.dark, 0.02, 0.16, 0.08 + barrel * 0.25, 1.2, 0);
+  const turret = box(0.16, 0.08, 0.14, m.dark, 0, 0.2, -0.02);
+  rim(turret);
+  g.add(turret);
+  const gun = cap(0.028, barrel, m.dark, 0.02, 0.2, 0.1 + barrel * 0.25, 1.2, 0);
   rim(gun);
   g.add(gun);
-  g.add(box(0.04, 0.03, 0.05, m.visor, 0.02, 0.16, 0.1 + barrel * 0.45));
+  g.add(box(0.05, 0.035, 0.06, m.visor, 0.02, 0.2, 0.12 + barrel * 0.45));
+  g.add(box(0.1, 0.03, 0.04, m.rim, 0, 0.22, 0.08));
   for (const sx of [-1, 1] as const) {
-    g.add(box(0.06, 0.04, 0.1, m.hull, sx * 0.12, 0.05, 0.02));
+    g.add(box(0.08, 0.055, 0.16, m.hull, sx * 0.16, 0.055, 0.02));
+    g.add(ball(0.03, m.dark, sx * 0.16, 0.03, 0.1));
+    g.add(ball(0.03, m.dark, sx * 0.16, 0.03, -0.06));
   }
 }
 
 function squatTank(g: THREE.Group, m: M): void {
-  const hull = facet(0.14, m.hull, 0, 0.14, 0, 1.35, 0.7, 1.15);
+  const hull = facet(0.17, m.hull, 0, 0.16, 0, 1.45, 0.75, 1.2);
   rim(hull);
   g.add(hull);
-  const shield = box(0.05, 0.16, 0.2, m.plate, 0.14, 0.16, 0.04);
+  const shield = box(0.06, 0.2, 0.26, m.plate, 0.18, 0.18, 0.04);
   rim(shield);
   g.add(shield);
-  g.add(box(0.03, 0.08, 0.1, m.visor, 0.18, 0.16, 0.04));
-  for (const sx of [-1, 1] as const) {
-    g.add(cap(0.03, 0.08, m.dark, sx * 0.12, 0.07, 0.06, 0.4, sx * 0.2));
-    g.add(cap(0.03, 0.08, m.dark, sx * 0.12, 0.07, -0.06, 0.4, sx * 0.2));
+  g.add(box(0.035, 0.1, 0.12, m.visor, 0.22, 0.18, 0.04));
+  g.add(box(0.02, 0.04, 0.08, m.rim, 0.24, 0.18, 0.04));
+  for (const [sx, sz] of [[-1, 0.1], [1, 0.08], [-1, -0.09], [1, -0.1]] as const) {
+    leg(g, m, sx * 0.13, sz, 1.05, sx);
   }
 }
 
 function beetle(g: THREE.Group, m: M): void {
-  const carapace = facet(0.13, m.hull, 0, 0.14, 0, 1.2, 0.75, 1.35);
-  carapace.rotation.x = 0.25;
+  const carapace = facet(0.16, m.hull, 0, 0.18, 0, 1.25, 0.8, 1.45);
+  carapace.rotation.x = 0.28;
   rim(carapace);
   g.add(carapace);
-  g.add(crystal(m.core, 0, 0.26, -0.04, 0.18, 0.05, 0.2, 0));
-  g.add(crystal(m.shard, 0.05, 0.24, -0.08, 0.14, 0.04, 0.15, 0.3));
-  g.add(box(0.07, 0.025, 0.04, m.visor, 0, 0.16, 0.14));
-  for (const [sx, sz] of [[-1, 0.08], [1, 0.08], [-1, -0.07], [1, -0.07]] as const) {
-    g.add(cap(0.025, 0.09, m.dark, sx * 0.1, 0.07, sz, 0.45, sx * 0.3));
+  g.add(crystal(m.core, 0, 0.32, -0.04, 0.22, 0.06, 0.2, 0));
+  g.add(crystal(m.shard, 0.07, 0.28, -0.1, 0.16, 0.045, 0.15, 0.3));
+  g.add(box(0.09, 0.03, 0.05, m.visor, 0, 0.2, 0.18));
+  g.add(box(0.05, 0.012, 0.02, m.rim, 0, 0.2, 0.21));
+  for (const [sx, sz] of [[-1, 0.12], [1, 0.12], [-1, 0], [1, 0], [-1, -0.1], [1, -0.1]] as const) {
+    leg(g, m, sx * 0.12, sz, 0.95, sx * 1.15);
   }
 }
 
 function wedge(g: THREE.Group, m: M): void {
-  const body = octa(0.14, m.hull, 0, 0.12, 0.02, 0.7, 0.55, 1.6);
+  const body = octa(0.16, m.hull, 0, 0.16, 0.02, 0.72, 0.58, 1.7);
   rim(body);
   g.add(body);
-  g.add(cap(0.016, 0.42, m.plate, 0, 0.14, 0.22, 1.15, 0));
-  g.add(octa(0.04, m.core, 0, 0.14, 0.42, 0.7, 0.9, 0.7));
-  g.add(box(0.06, 0.02, 0.03, m.visor, 0, 0.16, 0.12));
+  const lance = cap(0.02, 0.5, m.plate, 0, 0.17, 0.28, 1.15, 0);
+  rim(lance);
+  g.add(lance);
+  g.add(octa(0.05, m.core, 0, 0.17, 0.52, 0.7, 0.9, 0.7));
+  g.add(box(0.07, 0.025, 0.04, m.visor, 0, 0.2, 0.14));
   for (const sx of [-1, 1] as const) {
-    g.add(cap(0.024, 0.08, m.dark, sx * 0.08, 0.06, -0.06, 0.3, sx * 0.2));
+    leg(g, m, sx * 0.1, -0.08, 0.95, sx);
+    arm(g, m, sx * 0.08, 0.18, 0.06, 0.85, sx, 0.85);
   }
 }
 
 function spider(g: THREE.Group, m: M): void {
-  g.add(facet(0.09, m.dark, 0, 0.14, 0, 1.1, 0.7, 1.1));
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 6, 0, Math.PI), m.visor);
+  const abdomen = facet(0.11, m.dark, 0, 0.18, 0, 1.2, 0.75, 1.2);
+  rim(abdomen);
+  g.add(abdomen);
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 6, 0, Math.PI), m.visor);
   dish.rotation.x = -0.9;
-  dish.position.set(0, 0.22, -0.02);
+  dish.position.set(0, 0.28, -0.02);
   g.add(dish);
+  g.add(box(0.07, 0.025, 0.04, m.rim, 0, 0.2, 0.14));
   for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    g.add(cap(0.016, 0.14, m.hull, Math.cos(a) * 0.12, 0.08, Math.sin(a) * 0.12, 0.7, Math.cos(a) * 0.4));
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    const x = Math.cos(a) * 0.14;
+    const z = Math.sin(a) * 0.14;
+    g.add(ball(0.028, m.hull, x * 0.7, 0.16, z * 0.7));
+    const thigh = cap(0.02, 0.14, m.dark, x, 0.11, z, 0.85, Math.cos(a) * 0.55);
+    rim(thigh);
+    g.add(thigh);
+    g.add(ball(0.022, m.hull, x * 1.15, 0.05, z * 1.15));
+    g.add(box(0.05, 0.02, 0.06, m.hull, x * 1.25, 0.02, z * 1.25));
   }
 }
 
 function hulk(g: THREE.Group, m: M): void {
-  const body = facet(0.18, m.hull, 0, 0.22, 0, 1.4, 0.85, 1.15);
+  const body = facet(0.22, m.hull, 0, 0.28, 0, 1.45, 0.9, 1.2);
   rim(body);
   g.add(body);
-  g.add(facet(0.1, m.dark, 0, 0.28, 0.1, 1.05, 0.7, 0.8));
-  g.add(crystal(m.core, 0, 0.4, 0, 0.22, 0.08));
-  g.add(box(0.1, 0.04, 0.05, m.visor, 0, 0.3, 0.18));
-  for (const [sx, sz] of [[-1, 0.1], [1, 0.1], [-1, -0.1], [1, -0.1]] as const) {
-    g.add(cap(0.04, 0.14, m.dark, sx * 0.14, 0.1, sz, 0.25, sx * 0.15));
-    g.add(ball(0.045, m.hull, sx * 0.16, 0.04, sz + 0.04));
+  const head = facet(0.12, m.dark, 0, 0.38, 0.12, 1.05, 0.75, 0.85);
+  rim(head);
+  g.add(head);
+  g.add(crystal(m.core, 0, 0.52, 0, 0.26, 0.09));
+  g.add(box(0.12, 0.05, 0.06, m.visor, 0, 0.4, 0.22));
+  g.add(box(0.07, 0.018, 0.025, m.rim, 0, 0.4, 0.26));
+  for (const [sx, sz] of [[-1, 0.12], [1, 0.12], [-1, -0.12], [1, -0.12]] as const) {
+    leg(g, m, sx * 0.16, sz, 1.25, sx);
+  }
+  for (const sx of [-1, 1] as const) {
+    arm(g, m, sx * 0.2, 0.32, 0.06, 1.2, sx, 1.25);
   }
 }
 
 function wraith(g: THREE.Group, m: M): void {
-  const body = facet(0.12, m.hull, 0, 0.16, 0, 1.1, 0.9, 1.4);
+  const body = facet(0.14, m.hull, 0, 0.2, 0, 1.15, 0.95, 1.5);
+  rim(body);
   g.add(body);
-  g.add(box(0.08, 0.03, 0.04, m.visor, 0, 0.18, 0.14));
+  g.add(box(0.1, 0.035, 0.05, m.visor, 0, 0.22, 0.18));
   for (const sx of [-1, 1] as const) {
-    g.add(cap(0.02, 0.16, m.dark, sx * 0.1, 0.1, -0.08, 0.8, sx * 0.4));
+    const wing = cap(0.022, 0.2, m.dark, sx * 0.14, 0.16, -0.08, 0.95, sx * 0.55);
+    rim(wing);
+    g.add(wing);
+    g.add(box(0.04, 0.02, 0.1, m.plate, sx * 0.2, 0.12, -0.16));
   }
-  fade(g, 0.45);
+  fade(g, 0.55);
 }
 
 function scorpion(g: THREE.Group, m: M): void {
-  const body = facet(0.09, m.hull, 0, 0.12, 0, 1.3, 0.65, 1.5);
+  const body = facet(0.12, m.hull, 0, 0.16, 0, 1.4, 0.7, 1.6);
   rim(body);
   g.add(body);
-  g.add(box(0.06, 0.02, 0.03, m.visor, 0, 0.14, 0.14));
-  g.add(box(0.018, 0.14, 0.04, m.plate, 0.12, 0.16, 0.1, 0, 0, 0.5));
-  g.add(box(0.018, 0.14, 0.04, m.plate, -0.12, 0.16, 0.1, 0, 0, -0.5));
+  g.add(box(0.08, 0.028, 0.04, m.visor, 0, 0.18, 0.18));
   for (const sx of [-1, 1] as const) {
-    g.add(cap(0.02, 0.1, m.dark, sx * 0.08, 0.06, 0.06, 0.4, sx * 0.25));
-    g.add(cap(0.02, 0.1, m.dark, sx * 0.08, 0.06, -0.06, 0.4, sx * 0.25));
+    g.add(ball(0.03, m.hull, sx * 0.12, 0.16, 0.1));
+    const claw = box(0.03, 0.16, 0.055, m.plate, sx * 0.16, 0.2, 0.16, 0, 0, sx * 0.55);
+    rim(claw);
+    g.add(claw);
+    g.add(box(0.022, 0.1, 0.04, m.dark, sx * 0.2, 0.14, 0.22, 0, 0, sx * 0.7));
+    leg(g, m, sx * 0.1, 0.06, 0.9, sx);
+    leg(g, m, sx * 0.1, -0.08, 0.9, sx);
   }
+  const tail = cap(0.022, 0.22, m.dark, 0, 0.28, -0.16, -0.9, 0);
+  rim(tail);
+  g.add(tail);
+  g.add(octa(0.045, m.core, 0, 0.4, -0.22, 0.7, 1.1, 0.7));
 }
 
 function naval(g: THREE.Group, type: UnitType, m: M): void {
@@ -328,47 +394,72 @@ export function buildHero(faction: FactionId, color: string): THREE.Group {
   return g;
 }
 
+function glassTower(
+  g: THREE.Group,
+  m: M,
+  x: number,
+  z: number,
+  floors: number,
+  w: number,
+  fh: number,
+): number {
+  const glass = lit("#1c2832");
+  const pane = lit("#2a3844");
+  let y = 0.14;
+  for (let i = 0; i < floors; i++) {
+    const tw = w * (1 - i * 0.035);
+    const storey = box(tw, fh, tw, i % 2 === 0 ? glass : pane, x, y + fh / 2, z);
+    rim(storey);
+    g.add(storey);
+    const band = 0.055;
+    const wy = y + fh * 0.58;
+    g.add(box(tw * 0.72, band, 0.018, m.visor, x, wy, z + tw * 0.5));
+    g.add(box(tw * 0.72, band, 0.018, m.visor, x, wy, z - tw * 0.5));
+    g.add(box(0.018, band, tw * 0.72, m.visor, x + tw * 0.5, wy, z));
+    g.add(box(0.018, band, tw * 0.72, m.visor, x - tw * 0.5, wy, z));
+    g.add(box(tw * 0.82, 0.012, tw * 0.82, m.rim, x, y + fh - 0.006, z));
+    y += fh + 0.014;
+  }
+  g.add(octa(w * 0.22, m.core, x, y + 0.04, z, 0.7, 1.2, 0.7));
+  return y;
+}
+
 export function buildSpire(faction: FactionId, color: string, capital: boolean, level = 1): THREE.Group {
   const g = new THREE.Group();
   const m = mats(faction, color);
   const lv = Math.max(1, Math.min(8, level));
-  const floors = (capital ? 3 : 2) + Math.min(4, lv);
-  const w = capital ? 0.28 : 0.22;
 
-  const plaza = box(0.82, 0.07, 0.82, lambert("#c8c4ba"), 0, 0.035, 0);
+  const plaza = box(0.95, 0.06, 0.95, lit("#c8c4ba"), 0, 0.03, 0);
   rim(plaza);
   g.add(plaza);
-  g.add(box(0.52, 0.06, 0.52, m.dark, 0, 0.09, 0));
+  g.add(box(0.62, 0.05, 0.62, m.dark, 0, 0.08, 0));
 
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.02, 8, 24), m.visor);
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.018, 8, 24), m.visor);
   halo.rotation.x = Math.PI / 2;
-  halo.position.set(0, 0.12, 0);
+  halo.position.set(0, 0.11, 0);
   g.add(halo);
 
-  let y = 0.12;
-  for (let i = 0; i < floors; i++) {
-    const fw = w * (1 - i * 0.05);
-    const fh = capital ? 0.26 : 0.22;
-    const storey = box(fw, fh, fw, lambert("#1e262e", m.accent, 0.12), 0, y + fh / 2, -0.06);
-    rim(storey);
-    g.add(storey);
-    g.add(box(fw * 0.78, 0.045, 0.035, m.visor, 0, y + fh * 0.55, fw * 0.48 - 0.06));
-    g.add(box(fw * 0.78, 0.045, 0.035, m.visor, 0, y + fh * 0.55, -fw * 0.48 - 0.06));
-    g.add(box(0.035, 0.045, fw * 0.78, m.visor, fw * 0.48, y + fh * 0.55, -0.06));
-    y += fh + 0.01;
+  const mainFloors = (capital ? 4 : 3) + Math.min(3, lv);
+  const midFloors = Math.max(2, mainFloors - 2);
+  const lowFloors = Math.max(2, mainFloors - 3);
+  const fh = capital ? 0.2 : 0.175;
+
+  const mainH = glassTower(g, m, 0.02, -0.04, mainFloors, capital ? 0.26 : 0.2, fh);
+  glassTower(g, m, 0.28, -0.22, midFloors, capital ? 0.16 : 0.13, fh * 0.9);
+  glassTower(g, m, -0.24, 0.2, lowFloors, capital ? 0.15 : 0.12, fh * 0.88);
+  if (capital) {
+    glassTower(g, m, 0.26, 0.22, Math.max(2, lowFloors - 1), 0.12, fh * 0.82);
+    glassTower(g, m, -0.22, -0.2, 2, 0.11, fh * 0.8);
   }
 
-  g.add(crystal(m.core, 0, y + 0.1, -0.06, 0.22, 0.07));
+  g.add(crystal(m.core, 0.02, mainH + 0.12, -0.04, 0.2, 0.06));
   if (capital) {
-    g.add(crystal(m.shard, 0.1, y + 0.04, -0.12, 0.16, 0.05, 0.2, 0.3));
-    g.add(crystal(m.shard, -0.1, y + 0.04, -0.12, 0.16, 0.05, 0.2, -0.3));
-  }
-  for (const [x, z] of [[0.28, 0.2], [-0.26, 0.18]] as const) {
-    g.add(crystal(m.shard, x, 0.2, z, 0.2, 0.05));
+    g.add(crystal(m.shard, 0.14, mainH + 0.02, -0.12, 0.14, 0.045, 0.2, 0.3));
+    g.add(crystal(m.shard, -0.12, mainH + 0.02, 0.08, 0.14, 0.045, 0.2, -0.3));
   }
 
   const light = new THREE.PointLight(m.accent, capital ? 1.2 : 0.7, capital ? 3.4 : 2.2, 2);
-  light.position.set(0, y * 0.6, -0.04);
+  light.position.set(0, mainH * 0.55, -0.04);
   g.add(light);
   return g;
 }

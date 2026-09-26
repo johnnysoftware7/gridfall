@@ -119,13 +119,18 @@ async function main() {
           kind: f.text === "☠" ? "skull" : "text", text: f.text,
         });
       }
-      for (let i = 0; i < 40; i++) {
-        const a = (Math.PI * 2 * i) / 40;
-        const r = 0.15 + (i % 5) * 0.08;
+      for (let i = 0; i < 88; i++) {
+        const a = (Math.PI * 2 * i) / 22 + (i % 4) * 0.2;
+        const r = 0.12 + (i % 8) * 0.11;
         api.fx.particles.push({
-          gx: x, gy: y, x: Math.cos(a) * r, y: 0.55 + (i % 4) * 0.12, z: Math.sin(a) * r,
-          vx: Math.cos(a) * 0.05, vy: 0.02, vz: Math.sin(a) * 0.05,
-          life: 20000, max: 20000, color: i % 3 === 0 ? "#ffe14a" : "#ff6a3a", size: 7, kind: "square",
+          gx: x, gy: y,
+          x: Math.cos(a) * r + ((i % 5) - 2) * 0.08,
+          y: 0.4 + (i % 6) * 0.14,
+          z: Math.sin(a) * r + ((i % 3) - 1) * 0.07,
+          vx: 0, vy: 0, vz: 0,
+          life: 20000, max: 20000,
+          color: i % 3 === 0 ? "#ffe14a" : i % 3 === 1 ? "#ff6a3a" : "#ff8a2a",
+          size: 10, kind: "square",
         });
       }
     });

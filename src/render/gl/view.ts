@@ -173,14 +173,14 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     for (let y = 0; y < state.size; y++) {
       for (let x = 0; x < state.size; x++) {
         const geo = new RoundedBoxGeometry(0.94, 1, 0.94, 2, 0.07);
-        const mat = lambert("#3a4450");
+        const mat = new THREE.MeshBasicMaterial({ color: "#3a4450" });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.receiveShadow = true;
         mesh.castShadow = true;
         mesh.userData = { tx: x, ty: y };
         const cap = new THREE.Mesh(
           new RoundedBoxGeometry(0.88, 0.06, 0.88, 2, 0.06),
-          lambert("#d0d6e0"),
+          new THREE.MeshBasicMaterial({ color: "#d0d6e0" }),
         );
         cap.receiveShadow = true;
         cap.add(new THREE.LineSegments(
@@ -208,7 +208,6 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     }
   }
   const p = state.players[pid];
-  const tnow = fx.now || 0;
   for (const mesh of h.tileMesh) {
     const x = mesh.userData.tx as number;
     const y = mesh.userData.ty as number;
@@ -217,26 +216,33 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     const explored = p.explored[y * state.size + x];
     const cityHere = cityAt(state, x, y);
     const check = (x + y) % 2 === 0;
-    const mat = mesh.material as THREE.MeshLambertMaterial;
-    const pale = explored && t.owner !== null;
-    mat.color.set(pale ? "#7a8088" : check ? "#5a626c" : "#4a525c");
-    mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a2430" : "#000");
-    mat.emissiveIntensity = explored && (t.terrain === "shelf" || t.terrain === "deep")
-      ? 0.08 + Math.sin(tnow * 0.003 + x + y) * 0.02
-      : 0;
-    const hgt = pale ? 0.95 : explored ? Math.max(0.82, lookT.h) : 0.88;
+    const mat = mesh.material as THREE.MeshBasicMaterial;
+    const owned = explored && t.owner !== null;
+    const mine = owned && t.owner === pid;
+    const fac = owned ? FACTIONS[state.players[t.owner!].faction] : null;
+    let side = check ? "#14181e" : "#c8ccd6";
+    let capCol = check ? "#0a0c10" : "#e8eaf2";
+    if (mine) {
+      side = check ? "#1a1e24" : "#e4e8f0";
+      capCol = check ? "#12151a" : "#f7f8fc";
+    } else if (owned && fac) {
+      side = check ? mixHex("#16141c", fac.color, 0.16) : mixHex("#d0c8d4", fac.color, 0.14);
+      capCol = check ? mixHex("#100e14", fac.color, 0.14) : mixHex("#eee8f0", fac.color, 0.12);
+    }
+    if (explored && (t.terrain === "shelf" || t.terrain === "deep") && !owned) {
+      side = check ? "#0c1820" : "#8aa0b0";
+      capCol = check ? "#081018" : "#b8c8d4";
+    }
+    if (cityHere && explored && !check) {
+      capCol = mixHex(capCol, cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff", 0.18);
+    }
+    mat.color.set(side);
+    const hgt = owned ? 0.95 : explored ? Math.max(0.82, lookT.h) : 0.88;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
-    const capMat = cap.material as THREE.MeshLambertMaterial;
-    let capCol = check ? "#0a0c10" : "#3a4048";
-    if (pale) {
-      const fac = FACTIONS[state.players[t.owner!].faction];
-      capCol = mixHex("#f2f4f8", fac.color, 0.08);
-    }
+    const capMat = cap.material as THREE.MeshBasicMaterial;
     capMat.color.set(capCol);
-    capMat.emissive.set(cityHere && explored ? (cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff") : "#000");
-    capMat.emissiveIntensity = cityHere && explored ? 0.22 : 0;
     cap.position.y = 0.5;
     cap.visible = true;
     const glint = mesh.children[1] as THREE.Mesh;
@@ -298,7 +304,7 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital, city.level);
-      sp.scale.setScalar(city.isCapital ? 1.7 : 1.4);
+      sp.scale.setScalar(city.isCapital ? 2.05 : 1.7);
       sp.position.set(t.x - 0.2, lift, t.y - 0.2);
       h.props.add(sp);
       if (city.monument) {
@@ -356,7 +362,7 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
     const big = u.type === "titan" || u.type === "leviathan";
-    g.scale.setScalar(big ? 2.9 : 2.55);
+    g.scale.setScalar(big ? 3.45 : 3.15);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
     const toward = onCity ? 0.28 : 0.04;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
@@ -417,12 +423,15 @@ function syncFx(h: Handle): void {
       h.fxg.add(spr);
       continue;
     }
-    const mat = glow(p.color, 1.8 * a);
-    const mesh = p.kind === "square"
-      ? new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.24), mat)
-      : new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), mat);
-    mesh.position.set(p.gx + p.x, Math.max(0.25, p.y), p.gy + p.z);
-    mesh.scale.setScalar(0.9 + a);
+    const mat = new THREE.MeshBasicMaterial({
+      color: p.color,
+      transparent: true,
+      opacity: Math.max(0.55, a),
+    });
+    const s = p.kind === "square" ? 0.34 : 0.1;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), mat);
+    mesh.position.set(p.gx + p.x, Math.max(0.35, p.y), p.gy + p.z);
+    mesh.scale.setScalar(0.95 + a * 0.35);
     h.fxg.add(mesh);
   }
 }
@@ -460,7 +469,7 @@ export function drawWorldUi(
   for (const c of state.cities) {
     if (c.owner === null) continue;
     if (!state.players[pid].explored[c.y * state.size + c.x]) continue;
-    const p = projectTile(c.x - 0.2, c.y - 0.2, 1.7);
+    const p = projectTile(c.x - 0.2, c.y - 0.2, 2.15);
     if (!p) continue;
     ctx.font = "600 13px system-ui";
     ctx.lineWidth = 4;

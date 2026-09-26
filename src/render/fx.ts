@@ -47,22 +47,23 @@ export function tickFx(dt: number): void {
   });
 }
 
-export function burst(tx: number, ty: number, color: string, n = 28): void {
+export function burst(tx: number, ty: number, color: string, n = 48): void {
   for (let i = 0; i < n; i++) {
-    const a = (Math.PI * 2 * i) / n + Math.random();
+    const a = (Math.PI * 2 * i) / n + Math.random() * 0.4;
+    const r = 0.06 + (i % 6) * 0.05;
     fx.particles.push({
       gx: tx,
       gy: ty,
-      x: Math.cos(a) * 0.08,
-      y: 0.55,
-      z: Math.sin(a) * 0.08,
-      vx: Math.cos(a) * (0.45 + Math.random() * 0.65),
-      vy: 0.35 + Math.random() * 0.55,
-      vz: Math.sin(a) * (0.45 + Math.random() * 0.65),
-      life: 900 + Math.random() * 400,
-      max: 1300,
-      color: i % 3 === 0 ? "#ffe14a" : color,
-      size: 7 + Math.random() * 6,
+      x: Math.cos(a) * r,
+      y: 0.45 + (i % 4) * 0.08,
+      z: Math.sin(a) * r,
+      vx: Math.cos(a) * (0.55 + Math.random() * 0.75),
+      vy: 0.4 + Math.random() * 0.65,
+      vz: Math.sin(a) * (0.55 + Math.random() * 0.75),
+      life: 1000 + Math.random() * 500,
+      max: 1500,
+      color: i % 3 === 0 ? "#ffe14a" : i % 3 === 1 ? "#ff6a3a" : color,
+      size: 10 + Math.random() * 8,
       kind: "square",
     });
   }
@@ -90,7 +91,7 @@ export function floatText(tx: number, ty: number, text: string, color: string): 
 
 export function killMark(tx: number, ty: number): void {
   floatText(tx, ty, "☠", "#ff4d3a");
-  burst(tx, ty, "#ff6a3a", 36);
+  burst(tx, ty, "#ff6a3a", 56);
 }
 
 export function punch(amount = 5): void {
