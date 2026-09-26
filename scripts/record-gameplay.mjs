@@ -209,26 +209,35 @@ async function playthrough(page) {
   await clickFirst(page, "#start");
 
   await page.locator("#board").waitFor({ state: "visible", timeout: 10_000 });
-  await hold(page, 2800);
+  await hold(page, 3200);
 
-  // Early board + fog: select Trooper, show move markers, move.
+  // Ease zoom out a touch so fog + capital read together.
+  await page.mouse.move(VIEW.width / 2, VIEW.height / 2);
+  await page.mouse.wheel(0, 380);
+  await hold(page, 900);
+
+  // Early board + fog: select Trooper, hold so move markers read, then move.
   let info = await gameInfo(page);
   const trooper = info?.units.find((u) => u.type === "trooper") ?? info?.units[0];
   if (trooper) {
+    await page.evaluate((id) => {
+      const api = /** @type {any} */ (window).__GRIDFALL__;
+      api.selectUnit(id);
+    }, trooper.id);
     await tapTile(page, trooper.x, trooper.y);
-    await hold(page, 1800);
+    await hold(page, 2400);
     const dest = trooper.moves[0];
     if (dest) {
       await tapTile(page, dest.x, dest.y);
-      await hold(page, 1600);
+      await hold(page, 2000);
     }
   }
 
   // Tech tree (T) open / close.
   await page.keyboard.press("t");
-  await hold(page, 3200);
+  await hold(page, 3800);
   await page.keyboard.press("t");
-  await hold(page, 900);
+  await hold(page, 1200);
 
   // Harvest fruit (Helix + Logistics) or train a Trooper if Energy allows.
   info = await gameInfo(page);
@@ -264,38 +273,42 @@ async function playthrough(page) {
   }
 
   // Several end turns so the board progresses; act when we can.
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     await dismissLevelUp(page);
     info = await gameInfo(page);
     if (!info || info.over) break;
 
     const u = info.units.find((x) => x.attacks.length || (!x.moved && x.moves.length));
     if (u && i % 2 === 0) {
+      await page.evaluate((id) => {
+        const api = /** @type {any} */ (window).__GRIDFALL__;
+        api.selectUnit(id);
+      }, u.id);
       await tapTile(page, u.x, u.y);
-      await hold(page, 900);
+      await hold(page, 1400);
       const tgt = u.attacks[0] ?? u.moves[0];
       if (tgt) {
         await tapTile(page, tgt.x, tgt.y);
-        await hold(page, 1000);
+        await hold(page, 1400);
       }
-    } else if (info.cities[0] && info.energy >= 2 && i === 1) {
+    } else if (info.cities[0] && info.energy >= 2 && (i === 1 || i === 3)) {
       await tapTile(page, info.cities[0].x, info.cities[0].y);
-      await hold(page, 700);
+      await hold(page, 900);
       const trainBtn = page.locator("#sel button").filter({ hasText: /Trooper/i }).first();
       if (await trainBtn.count()) {
         await trainBtn.click();
-        await hold(page, 1000);
+        await hold(page, 1200);
       }
     }
 
     await page.keyboard.press("e");
-    await hold(page, 2200);
+    await hold(page, 2600);
     await dismissLevelUp(page);
-    await hold(page, 800);
+    await hold(page, 900);
   }
 
   // Final look at the progressed board.
-  await hold(page, 2200);
+  await hold(page, 2800);
 }
 
 async function transcode(src, dest) {
@@ -402,7 +415,10 @@ async function main() {
   page.setDefaultTimeout(12_000);
 
   try {
+    const t0 = Date.now();
     await playthrough(page);
+    const pad = 74_000 - (Date.now() - t0);
+    if (pad > 400) await hold(page, pad);
     await page.screenshot({ path: path.join(ROOT, "tests", "e2e", "shots", "gameplay-final.png") });
   } finally {
     const video = page.video();
