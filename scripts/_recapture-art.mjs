@@ -80,7 +80,7 @@ async function main() {
       const api = /** @type {any} */ (window).__GRIDFALL__;
       const g = api.state();
       const c = g.cities.find((x) => x.owner === 0 && x.isCapital) ?? g.cities[0];
-      const types = ["trooper", "skimmer", "bulwark", "netrunner", "blade", "lancer"];
+      const types = ["trooper", "skimmer", "marksman", "bulwark", "netrunner", "blade"];
       const spots = [
         [2, 0], [0, 2], [2, 2], [-2, 1], [1, -2], [3, 1],
       ];
