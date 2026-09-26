@@ -15,11 +15,11 @@ export function terrainLook(terrain: Terrain): {
   rough: number;
   emit: number;
 } {
-  if (terrain === "deep") return { top: "#07141c", side: "#03080e", h: 0.22, metal: 0.92, rough: 0.08, emit: 0.08 };
-  if (terrain === "shelf") return { top: "#0e4658", side: "#062430", h: 0.34, metal: 0.82, rough: 0.12, emit: 0.14 };
-  if (terrain === "ridge") return { top: "#5a5244", side: "#241e16", h: 0.96, metal: 0.38, rough: 0.38, emit: 0 };
-  if (terrain === "forest") return { top: "#1a4a26", side: "#0c1c12", h: 0.54, metal: 0.22, rough: 0.46, emit: 0.06 };
-  return { top: "#2a3038", side: "#101216", h: 0.5, metal: 0.55, rough: 0.26, emit: 0 };
+  if (terrain === "deep") return { top: "#0a3040", side: "#0a2834", h: 0.22, metal: 0.92, rough: 0.08, emit: 0.08 };
+  if (terrain === "shelf") return { top: "#1a6a80", side: "#145060", h: 0.34, metal: 0.82, rough: 0.12, emit: 0.14 };
+  if (terrain === "ridge") return { top: "#6a5e4c", side: "#4a4034", h: 0.96, metal: 0.38, rough: 0.38, emit: 0 };
+  if (terrain === "forest") return { top: "#2a6a38", side: "#1a4a26", h: 0.54, metal: 0.22, rough: 0.46, emit: 0.06 };
+  return { top: "#4a5564", side: "#5a6a7c", h: 0.72, metal: 0.55, rough: 0.26, emit: 0 };
 }
 
 export function factionAccent(id: FactionId): string {
@@ -71,6 +71,14 @@ export function physical(opts: {
 
 export function metal(color: string, metalness = 0.86, rough = 0.2): THREE.MeshPhysicalMaterial {
   return physical({ color, metal: metalness, rough, clearcoat: 0.85 });
+}
+
+export function lambert(color: string, emit?: string, emitInt = 0): THREE.MeshLambertMaterial {
+  return new THREE.MeshLambertMaterial({
+    color,
+    emissive: emit ?? "#000000",
+    emissiveIntensity: emitInt,
+  });
 }
 
 export function glow(color: string, int = 1.4): THREE.MeshPhysicalMaterial {

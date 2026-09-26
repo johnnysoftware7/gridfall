@@ -93,7 +93,7 @@ async function main() {
       const c = g.cities.find((x) => x.owner === 0 && x.isCapital) ?? g.cities[0];
       const TILE_W = 88;
       const TILE_H = 44;
-      api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 2.45);
+      api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 2.05);
     });
     await page.waitForTimeout(700);
     await shot(page, "03-city-closeup.png");

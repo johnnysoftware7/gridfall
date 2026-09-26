@@ -8,7 +8,7 @@ import type { GameState, PlayerId } from "../../engine/types";
 import type { Camera } from "../iso";
 import { fx, hopAt } from "../fx";
 import { buildBeacon, buildForest, buildMech, buildSpire } from "./mechs";
-import { factionAccent, glow, makeDarkEnv, metal, physical, terrainLook } from "./palette";
+import { factionAccent, glow, lambert, makeDarkEnv, metal, physical, terrainLook } from "./palette";
 
 export interface BoardView {
   pid: PlayerId;
@@ -153,7 +153,7 @@ function aimCamera(h: Handle, cam: Camera, aspect: number, size: number): void {
   const g = isoToGrid(cam);
   look.set(g.x, 0, g.y);
   const dist = 11 / Math.max(0.7, cam.zoom);
-  h.camera.position.set(look.x + dist, dist * 1.28, look.z + dist);
+  h.camera.position.set(look.x + dist, dist * 1.12, look.z + dist);
   h.camera.lookAt(look);
   const vh = (size < 13 ? 7.2 : 8.4) / Math.max(0.7, cam.zoom);
   h.camera.left = -vh * aspect * 0.5;
@@ -173,14 +173,14 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     for (let y = 0; y < state.size; y++) {
       for (let x = 0; x < state.size; x++) {
         const geo = new RoundedBoxGeometry(0.94, 1, 0.94, 2, 0.07);
-        const mat = physical({ color: "#222", metal: 0.6, rough: 0.3, clearcoat: 0.9 });
+        const mat = lambert("#3a4450");
         const mesh = new THREE.Mesh(geo, mat);
         mesh.receiveShadow = true;
         mesh.castShadow = true;
         mesh.userData = { tx: x, ty: y };
         const cap = new THREE.Mesh(
           new RoundedBoxGeometry(0.88, 0.06, 0.88, 2, 0.06),
-          physical({ color: "#333", metal: 0.82, rough: 0.1, clearcoat: 1 }),
+          lambert("#d0d6e0"),
         );
         cap.receiveShadow = true;
         cap.add(new THREE.LineSegments(
@@ -212,19 +212,17 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     const lookT = terrainLook(t.terrain);
     const explored = p.explored[y * state.size + x];
     const cityHere = cityAt(state, x, y);
-    const mat = mesh.material as THREE.MeshPhysicalMaterial;
-    mat.color.set(explored ? lookT.side : "#1c222c");
-    mat.metalness = explored ? lookT.metal : 0.32;
-    mat.roughness = explored ? Math.min(0.55, lookT.rough + 0.12) : 0.5;
+    const mat = mesh.material as THREE.MeshLambertMaterial;
+    mat.color.set(explored ? lookT.side : "#2a3340");
     mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a3040" : "#000");
     mat.emissiveIntensity = explored && (t.terrain === "shelf" || t.terrain === "deep")
-      ? 0.1 + Math.sin(tnow * 0.003 + x + y) * 0.03
+      ? 0.12 + Math.sin(tnow * 0.003 + x + y) * 0.03
       : lookT.emit;
     const hgt = explored ? lookT.h : 0.68;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
-    const capMat = cap.material as THREE.MeshPhysicalMaterial;
+    const capMat = cap.material as THREE.MeshLambertMaterial;
     let capCol = mixHex(lookT.top, "#e4eaf4", 0.22);
     if (t.owner !== null && explored) {
       const fac = FACTIONS[state.players[t.owner].faction];
@@ -295,8 +293,8 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital, city.level);
-      sp.scale.setScalar(city.isCapital ? 1.85 : 1.5);
-      sp.position.set(t.x - 0.22, lift, t.y - 0.22);
+      sp.scale.setScalar(city.isCapital ? 2.05 : 1.65);
+      sp.position.set(t.x - 0.32, lift, t.y - 0.32);
       h.props.add(sp);
       if (city.monument) {
         const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.03, 8, 22), glow("#f5d76e", 2.2));
@@ -355,8 +353,9 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const big = u.type === "titan" || u.type === "leviathan";
     g.scale.setScalar(big ? 2.85 : 2.55);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
-    const toward = onCity ? 0.3 : 0.05;
+    const toward = onCity ? 0.34 : 0.05;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
+    g.rotation.y = Math.PI / 4;
     const idle = u.owner === view.pid && canAct(u);
     g.position.y += idle ? Math.sin((fx.now || 0) * 0.006 + u.x) * 0.025 : 0;
     g.visible = true;
@@ -456,7 +455,7 @@ export function drawWorldUi(
   for (const c of state.cities) {
     if (c.owner === null) continue;
     if (!state.players[pid].explored[c.y * state.size + c.x]) continue;
-    const p = projectTile(c.x - 0.22, c.y - 0.22, 1.85);
+    const p = projectTile(c.x - 0.32, c.y - 0.32, 2.05);
     if (!p) continue;
     ctx.font = "600 13px system-ui";
     ctx.lineWidth = 4;
@@ -471,7 +470,7 @@ export function drawWorldUi(
     if (!state.players[pid].explored[u.y * state.size + u.x]) continue;
     const hop = hopAt(u.id);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
-    const toward = onCity ? 0.3 : 0.05;
+    const toward = onCity ? 0.34 : 0.05;
     const p = projectTile((hop ? hop.x : u.x) + toward, (hop ? hop.y : u.y) + toward, 0.85);
     if (!p) continue;
     ctx.fillStyle = "#f4f4f4";

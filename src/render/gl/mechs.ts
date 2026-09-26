@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { FactionId, UnitType } from "../../engine/types";
-import { factionAccent, glow, ice, iceTint, metal } from "./palette";
+import { factionAccent, glow, ice, iceTint, lambert, metal } from "./palette";
 
 const RIM = new THREE.LineBasicMaterial({ color: "#eef6ff" });
 
@@ -81,13 +81,15 @@ function mats(faction: FactionId, color: string) {
   const crystalBias = faction === "meridian" ? 0.18 : faction === "ashfall" ? 0.32 : 0.5;
   return {
     accent,
-    hull: metal("#6a7380", 0.88, 0.22),
-    dark: metal("#2c323a", 0.82, 0.28),
-    plate: metal(color, 0.62, 0.2),
+    hull: lambert("#6a7380", "#1c2430", 0.1),
+    dark: lambert("#2e343c", "#0a0c10", 0.05),
+    plate: lambert(color, accent, 0.12),
     visor: lit(accent),
     ice: ice(tint, accent, crystalBias),
     core: lit(accent),
     glow: glow(accent, 1.85),
+    shard: lit(tint),
+    shardDim: lit(color),
   };
 }
 
@@ -145,12 +147,12 @@ export function buildMech(type: UnitType, faction: FactionId, color: string): TH
     g.add(upper, fore, fist);
   }
 
-  const helm = facet(0.085, m.hull, 0, hover ? 0.48 : 0.58, 0.05, 0.95, 0.85, 0.9);
+  const helm = facet(0.09, m.hull, 0, hover ? 0.5 : 0.62, 0.04, 0.95, 0.88, 0.9);
   rim(helm);
   g.add(helm);
-  const visor = box(0.12, 0.045, 0.045, m.visor, 0, hover ? 0.475 : 0.575, 0.12);
+  const visor = box(0.16, 0.07, 0.07, m.visor, 0, hover ? 0.49 : 0.61, 0.13);
   g.add(visor);
-  g.add(box(0.08, 0.02, 0.02, lit("#f4ffff"), 0, hover ? 0.475 : 0.575, 0.145));
+  g.add(box(0.11, 0.028, 0.03, lit("#f4ffff"), 0, hover ? 0.49 : 0.61, 0.17));
   g.add(crest(faction, m, hover ? 0.54 : 0.66));
 
   gear(g, type, m, hover);
@@ -242,7 +244,7 @@ function crest(faction: FactionId, m: M, y: number): THREE.Object3D {
 
 function fade(g: THREE.Group, opacity: number): void {
   g.traverse((c) => {
-    if (c instanceof THREE.Mesh && c.material instanceof THREE.MeshPhysicalMaterial) {
+    if (c instanceof THREE.Mesh && (c.material instanceof THREE.MeshPhysicalMaterial || c.material instanceof THREE.MeshLambertMaterial)) {
       c.material = c.material.clone();
       c.material.transparent = true;
       c.material.opacity = opacity;
@@ -339,7 +341,7 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean, 
   g.add(box(0.58, 0.1, 0.58, m.dark, 0, 0.12, 0));
 
   const towerH = (capital ? 1.15 : 0.72) + lv * 0.16;
-  const shaft = crystal(m.ice, 0, 0.18 + towerH * 0.45, -0.1, towerH, 0.16);
+  const shaft = crystal(m.shard, 0, 0.18 + towerH * 0.45, -0.1, towerH, 0.16);
   rim(shaft);
   g.add(shaft);
   g.add(crystal(m.core, 0, 0.2 + towerH * 0.45, -0.1, towerH * 0.78, 0.08));
@@ -353,14 +355,14 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean, 
     const a = (i / n) * Math.PI * 2 + 0.2;
     const rad = 0.18 + (i % 4) * 0.07;
     const h = (capital ? 0.95 : 0.58) + (i % 5) * 0.2 + lv * 0.07;
-    const mat = i % 2 === 0 ? m.core : m.ice;
+    const mat = i % 3 === 0 ? m.core : i % 3 === 1 ? m.shard : m.shardDim;
     g.add(crystal(mat, Math.cos(a) * rad, 0.2 + h * 0.42, -0.08 + Math.sin(a) * rad * 0.7, h, 0.13 + (i % 3) * 0.03, 0.2, a * 0.3));
   }
 
   if (capital) {
     g.add(crystal(m.core, 0, 0.28 + towerH, -0.1, 0.42, 0.09));
     for (const sx of [-1, 1] as const) {
-      g.add(crystal(m.ice, sx * 0.16, 0.22 + towerH * 0.85, -0.18, 0.38, 0.07, 0.15, sx * 0.35));
+      g.add(crystal(m.shard, sx * 0.16, 0.22 + towerH * 0.85, -0.18, 0.38, 0.07, 0.15, sx * 0.35));
     }
   }
 

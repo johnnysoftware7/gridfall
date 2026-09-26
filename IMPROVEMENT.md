@@ -198,3 +198,21 @@ John's Futuretopia stills remain the bar. Cycle 7 stills were studio-lit cube pe
 **Residual vs the bar:** hero still simpler than the reference ice sculpture; board units need more readable silhouette at play zoom; cities need more interior glow; combat juice is easy to miss on the overlay.
 
 ---
+
+## Cycle 9 — 2026-09-26 (units + cities)
+
+Close the gap named in Cycle 8. Spec flavor (glass towers / neon rim) is cosmetic only; rules unchanged. Headless SwiftShader cannot light MeshPhysicalMaterial, so hulls and cities now use Lambert + MeshBasicMaterial emissives.
+
+**Play notes (art-pass stills 01–05, same cameras as last pass):** Starting Trooper is a faceted grey biped with capsule limbs, pauldrons, a cyan visor, and a white edge — not a box. Command Spire is a cyan shard cluster sitting behind the unit. Combat still shows −6 and ☠. Menu hero is unchanged ice-golem.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.3 | Honest vs the attached Futuretopia stills. The 7.8 hole (box units, missing cities) is smaller: mechs have stance/visor/edge, cities have shard mass. 9.0 would be a lie — freeze-frames still look like a flat isometric toy next to `4b_combat_closeup` / `5_city_closeup`. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. Raycast pick. |
+| Fun | 8.5 | −6 / ☠ now survive a freeze-frame. Overlay still quieter than `4_combat_juice`. |
+
+**Shipped:** icosahedron hulls + capsule limbs + always-lit visor; Lambert materials so SwiftShader shows form; crystal Command Spires with MeshBasicMaterial cores (no bloom); dark tile bodies + glossy caps; WebGL combat sprites; units offset off the spire.
+
+**Remaining vs the bar (why this is not 9.0):** Side-by-side, Futuretopia stills are dark metal creatures on thick glossy black/white cubes with a field of orange numbers. Ours still read as a small pale island: the Trooper is a cute faceted biped, not the animal/mech variety in `4b`/`5`; the spire is a cyan shard burst, not a glass tower with night rim and level-readable volumes; tile sides barely show in the headless capture, so the board never becomes that checkerboard of beveled cubes; combat juice is a pair of floats at the top of the frame, not a thick particle field.
+
+---
