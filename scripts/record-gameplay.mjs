@@ -148,17 +148,12 @@ async function gameInfo(page) {
 async function tileClient(page, x, y) {
   return page.evaluate(({ x, y }) => {
     const api = /** @type {any} */ (window).__GRIDFALL__;
-    const cam = api.ui.cam;
     const canvas = document.querySelector("#board");
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const TILE_W = 88;
-    const TILE_H = 44;
-    const isoX = (x - y) * (TILE_W / 2);
-    const isoY = (x + y) * (TILE_H / 2);
-    const sx = (isoX - cam.x) * cam.zoom + rect.width / 2;
-    const sy = (isoY - cam.y) * cam.zoom + rect.height / 2;
-    return { x: rect.left + sx, y: rect.top + sy };
+    const p = api.worldToScreen?.(x, y);
+    if (!p) return null;
+    return { x: rect.left + p.x, y: rect.top + p.y };
   }, { x, y });
 }
 

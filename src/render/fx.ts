@@ -1,15 +1,17 @@
-import { iso } from "./iso";
-
 export interface Particle {
+  gx: number;
+  gy: number;
   x: number;
   y: number;
+  z: number;
   vx: number;
   vy: number;
+  vz: number;
   life: number;
   max: number;
   color: string;
   size: number;
-  kind: "spark" | "ring" | "text";
+  kind: "spark" | "ring" | "text" | "square" | "skull";
   text?: string;
 }
 
@@ -39,37 +41,56 @@ export function tickFx(dt: number): void {
     p.life -= dt;
     p.x += p.vx * dt * 0.06;
     p.y += p.vy * dt * 0.06;
-    p.vy -= dt * 0.00025;
+    p.z += p.vz * dt * 0.06;
+    p.vy -= dt * 0.00018;
     return p.life > 0;
   });
 }
 
-export function burst(tx: number, ty: number, color: string, n = 10): void {
-  const p = iso(tx, ty);
+export function burst(tx: number, ty: number, color: string, n = 14): void {
   for (let i = 0; i < n; i++) {
     const a = (Math.PI * 2 * i) / n + Math.random();
     fx.particles.push({
-      x: p.x,
-      y: p.y - 10,
-      vx: Math.cos(a) * (0.6 + Math.random()),
-      vy: Math.sin(a) * (0.6 + Math.random()) - 0.4,
-      life: 420 + Math.random() * 280,
-      max: 700,
+      gx: tx,
+      gy: ty,
+      x: 0,
+      y: 0.55,
+      z: 0,
+      vx: Math.cos(a) * (0.35 + Math.random() * 0.5),
+      vy: 0.35 + Math.random() * 0.45,
+      vz: Math.sin(a) * (0.35 + Math.random() * 0.5),
+      life: 520 + Math.random() * 280,
+      max: 800,
       color,
-      size: 2 + Math.random() * 2.5,
-      kind: "spark",
+      size: 3 + Math.random() * 3,
+      kind: "square",
     });
   }
-  fx.particles.push({
-    x: p.x, y: p.y - 8, vx: 0, vy: 0, life: 380, max: 380, color, size: 16, kind: "ring",
-  });
 }
 
 export function floatText(tx: number, ty: number, text: string, color: string): void {
-  const p = iso(tx, ty);
+  const skull = /^-?\d+$/.test(text) || text.includes("☠");
   fx.particles.push({
-    x: p.x, y: p.y - 28, vx: 0, vy: -0.55, life: 900, max: 900, color, size: 14, kind: "text", text,
+    gx: tx,
+    gy: ty,
+    x: 0,
+    y: 1.1,
+    z: 0,
+    vx: 0,
+    vy: 0.42,
+    vz: 0,
+    life: 1300,
+    max: 1300,
+    color,
+    size: skull ? 40 : 32,
+    kind: text.includes("☠") ? "skull" : "text",
+    text,
   });
+}
+
+export function killMark(tx: number, ty: number): void {
+  floatText(tx, ty, "☠", "#ff4d3a");
+  burst(tx, ty, "#ff6a3a", 22);
 }
 
 export function punch(amount = 5): void {
@@ -95,31 +116,6 @@ export function hopAt(id: string): { x: number; y: number; arc: number } | null 
   };
 }
 
-export function drawFx(ctx: CanvasRenderingContext2D): void {
-  for (const p of fx.particles) {
-    const a = Math.max(0, p.life / p.max);
-    ctx.save();
-    ctx.globalAlpha = a;
-    if (p.kind === "spark") {
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (p.kind === "ring") {
-      ctx.strokeStyle = p.color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (1.2 - a), 0, Math.PI * 2);
-      ctx.stroke();
-    } else if (p.kind === "text" && p.text) {
-      ctx.font = "bold 16px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.strokeStyle = "rgba(0,0,0,0.65)";
-      ctx.lineWidth = 4;
-      ctx.strokeText(p.text, p.x, p.y);
-      ctx.fillStyle = p.color;
-      ctx.fillText(p.text, p.x, p.y);
-    }
-    ctx.restore();
-  }
+export function drawFx(): void {
+  /* 3D path consumes particles in view.ts / overlay */
 }

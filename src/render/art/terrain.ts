@@ -1,3 +1,4 @@
+/** Unused by the live WebGL board (`src/render/gl/`). Kept as a 2D fallback kit. */
 import type { Terrain } from "../../engine/types";
 import { TILE_H, TILE_W } from "../../data/constants";
 import { diamond, iso, thickness } from "../iso";

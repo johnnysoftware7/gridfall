@@ -151,3 +151,52 @@ Hard targets from John’s ~25 min phone playthrough. IP: original names/art onl
 **Residual:** 60–90s recording still compresses a 25-min war; phone More is one extra tap versus Polytopia’s four-disc strip.
 
 ---
+
+## Cycle 7 — 2026-09-26 (art pass)
+
+John: artwork is the #1 gap; Codex/Claude peers destroy the old 2D look. Bar = attached Futuretopia stills (beveled glossy cubes, metal mechs, crystalline cities, trailer menus).
+
+**Choice:** Three.js WebGL for the board + trailer heroes. Canvas 2D could not fake point lights, clearcoat, or real tile thickness. Engine stays pure. Logged in DECISIONS.md #25.
+
+**Play notes (after rewrite):**
+- Board now reads as a dark sci-fi cube world: rounded glossy tiles, owned plates go satin-white with faction tint, water/forest/ridge have height.
+- Troopers are dark metal mechs with faction visors, not blob helmets. Still boxier than the attached close-ups.
+- Command Spires are crystal clusters + point lights.
+- Combat floats are large; kills spawn a skull + square bursts.
+- Faction/victory sit on a 3D hero + hex floor. The hero is a low-poly metal golem, not yet the ice sculpture in the reference still.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.7 | Honest vs the attached bar. Tiles/lighting/owned plates are in the same sport. Menu hero and unit sculpt still lose a side-by-side with those stills — 9.0 would be a lie. |
+| Playability | 8.8 | HUD hierarchy, blue/red marks, helpers, Next/End unchanged. Raycast pick on the 3D grid. |
+| Fun | 8.5 | 3D presence + bigger combat juice. Not the focus of this run. |
+
+**Shipped:** `src/render/gl/` (view, mechs, hero, palette), overlay labels, RoomEnvironment + ACES, before/after in `artifacts/art-pass/`.
+
+**Residual vs the bar:** hero still too mannequin; units need more limb/silhouette variety; fog blocks are just tall dark cubes; no per-pixel bloom.
+
+---
+
+## Cycle 8 — 2026-09-26 (art pass, second sculpt)
+
+John's Futuretopia stills remain the bar. Cycle 7 stills were studio-lit cube people — that 8.7 was still generous.
+
+**Shipped this cycle:**
+- Ice/crystal hero with shoulder spikes, visor slit, chest core + point light
+- Hex-grid trailer floor, title over the mech, medals on a frosted bottom bar
+- Dark custom PMREM (no bright RoomEnvironment wash) + UnrealBloom
+- Units: wide stance, pauldrons, faction crests, dark hull + ice plates
+- Cities: larger crystal clusters, capital ring + light
+- Fog blocks, faction fence glow, connected maglev strips
+- Combat: 48px orange floats, ☠ + octahedron skull, bigger square bursts
+- Victory card: Rematch / Main Menu over the hero
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.9 | Second sculpt is in the same sport as the attached bar (dark glossy tiles, ice mech language, bloom). Still not a 9.0 until stills prove the hero silhouette and combat juice hold a side-by-side. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. |
+| Fun | 8.5 | Combat numbers and skulls are louder. Not the focus. |
+
+**Residual vs the bar:** need live stills of faction / city closeup / combat to confirm the ice hero is no longer a mannequin and that damage floats read like the reference.
+
+---

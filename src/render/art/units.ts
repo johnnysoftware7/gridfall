@@ -1,3 +1,4 @@
+/** Unused by the live WebGL board (`src/render/gl/`). Kept as a 2D fallback kit. */
 import type { FactionId, UnitType } from "../../engine/types";
 import { iso } from "../iso";
 import { drawHelmet } from "./helmets";
