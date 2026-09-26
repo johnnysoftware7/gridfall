@@ -34,6 +34,6 @@ Read **DESIGN.md** for the name map, **REFERENCE.md** for the sourced rules, **D
 
 ## Stubs (visible in Settings / README, not silent)
 
-- Music and SFX toggles do nothing — no original soundtrack was composed.
+- Music and SFX are original WebAudio beds (no licensed or Polytopia samples). Settings toggles start/stop them.
 - Corner beacons on the map rim are cosmetic.
 - Special-tribe units from the real game (Amphibian, Mooni, …) are out of scope.

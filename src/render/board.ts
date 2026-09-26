@@ -93,7 +93,9 @@ export function drawBoard(
       drawResource(ctx, x, y, t.resource);
     }
     if (t.building === "dock") drawDock(ctx, x, y);
-    if (t.building && t.building !== "dock") drawBuilding(ctx, x, y, t.building, t.owner !== null ? FACTIONS[state.players[t.owner].faction].color : "#aaa");
+    if (t.building && t.building !== "dock") {
+      drawBuilding(ctx, x, y, t.building, t.owner !== null ? FACTIONS[state.players[t.owner].faction].color : "#aaa", t.templeLevel);
+    }
     if (t.road || t.bridge) {
       const links = [];
       for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
@@ -151,6 +153,7 @@ export function drawBoard(
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const pt = iso(x, y);
       drawSpire(ctx, fac?.id ?? "helix", pt.x, pt.y, city.isCapital, fac?.color ?? "#bbb");
+      if (city.monument) drawMonument(ctx, pt.x, pt.y, fac?.color ?? "#f5d76e", city.monument);
     }
   }
 
@@ -256,19 +259,26 @@ function sameOwner(state: GameState, x: number, y: number, owner: PlayerId): boo
 
 function drawDock(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const p = iso(x, y);
+  const t = fx.now || 0;
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.fillStyle = "#c9b48a";
-  ctx.fillRect(-10, -4, 20, 8);
+  ctx.fillRect(-14, -5, 28, 10);
   ctx.fillStyle = "#8ac";
   ctx.beginPath();
-  ctx.arc(0, 0, 6, 0, Math.PI * 2);
+  ctx.arc(0, 0, 7, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = `rgba(126, 220, 255, ${0.35 + Math.sin(t * 0.008 + x) * 0.2})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 16, 5, 0, 0, Math.PI * 2);
+  ctx.stroke();
   ctx.restore();
 }
 
-function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, kind: string, color: string): void {
+function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, kind: string, color: string, level = 1): void {
   const p = iso(x, y);
+  const t = fx.now || 0;
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.fillStyle = color;
@@ -282,17 +292,73 @@ function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, kind:
     ctx.fillStyle = "#6a4";
     ctx.fillRect(-4, -12, 8, 14);
   } else if (kind.includes("Beacon") || kind === "beacon") {
-    ctx.fillStyle = "#eee";
+    const h = 22 + Math.min(5, Math.max(1, level)) * 10;
+    const pulse = 0.45 + Math.sin(t * 0.006 + x * 1.7) * 0.25;
+    const beam = ctx.createLinearGradient(0, -h - 40, 0, 8);
+    beam.addColorStop(0, `rgba(232, 246, 255, 0)`);
+    beam.addColorStop(0.35, `rgba(180, 230, 255, ${0.15 + pulse * 0.25})`);
+    beam.addColorStop(1, `rgba(255, 255, 255, ${0.55 + pulse * 0.3})`);
+    ctx.fillStyle = beam;
     ctx.beginPath();
-    ctx.moveTo(-6, 6);
-    ctx.lineTo(0, -16);
-    ctx.lineTo(6, 6);
+    ctx.moveTo(-7, 8);
+    ctx.lineTo(-2, -h - 36);
+    ctx.lineTo(2, -h - 36);
+    ctx.lineTo(7, 8);
+    ctx.closePath();
     ctx.fill();
+    ctx.shadowColor = "#c8f4ff";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#f4fbff";
+    ctx.beginPath();
+    ctx.moveTo(-8, 8);
+    ctx.lineTo(0, -h);
+    ctx.lineTo(8, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(255,255,255,${0.35 + pulse})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(0, -h - 8, 10 + pulse * 6, 4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.fillRect(-6, 4, 12, 5);
   } else {
     ctx.fillRect(-7, -8, 14, 12);
     ctx.fillStyle = "#eee";
     ctx.fillRect(-3, -12, 6, 5);
   }
+  ctx.restore();
+}
+
+function drawMonument(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, id: string): void {
+  const t = fx.now || 0;
+  const pulse = 0.5 + Math.sin(t * 0.005) * 0.25;
+  ctx.save();
+  ctx.translate(x, y - 52);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 22;
+  ctx.strokeStyle = `rgba(255, 230, 140, ${0.45 + pulse})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, 14 + pulse * 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "#f5d76e";
+  ctx.beginPath();
+  ctx.moveTo(0, -16);
+  ctx.lineTo(5, -4);
+  ctx.lineTo(-5, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "9px system-ui";
+  ctx.textAlign = "center";
+  const label = id === "killgate" ? "KILLGATE" : id === "vaultSurplus" ? "VAULT" : id === "archiveSpire" ? "ARCHIVE" : id === "nexusMarket" ? "NEXUS" : "ARRAY";
+  ctx.fillText(label, 0, 22);
   ctx.restore();
 }
 

@@ -126,3 +126,28 @@ Hard targets from John’s ~25 min phone playthrough. IP: original names/art onl
 | Fun | 8.2 | Hop + instant fights + floats; victory breakdown. Late-game navy still thin. |
 
 ---
+
+## Cycle 6 — 2026-09-26
+
+**Play notes (scripted human session + 25-min residual list):**
+- Five bottom-right discs still collided on a phone thumb arc.
+- Settings Music was a dead chip; SFX were thin beeps.
+- Late board was empty water: docks never built (AI spent-check was 5 vs dock 7), beacons were tiny triangles, navy was a box, AI rarely embarked or upgraded.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.8 | Authored hulls + wakes, dock wash, beacon sky-beams that grow with temple level, monument rings/labels over capitals. |
+| Playability | 8.8 | Phone 2×2 thumb cluster (Tech / More / Next / End) with overflow Settings+Stats; desktop two-row grid with larger Next/End. Settings Music/SFX both drive audio. |
+| Fun | 8.7 | Distinct SFX for select/move/attack/harvest/research/victory + tide pad; AI turn-scaled aggression, docks/beacons/naval upgrades, extra mid-late trains. |
+
+**Shipped:**
+- Bottom-right HUD: two-row desktop; phone overflow More menu; primary Next/End discs enlarged
+- Authored WebAudio SFX bed + light original music pad wired to Settings
+- Naval hulls, engine glow, wakes; dock shimmer; beacon columns; wonder crowns
+- AI: dock spend fix, aquaculture/navy/beacon preference, embark-to-dock, skiff upgrades, leftover trains, later-turn fight floor
+- Wonder/beacon juice + victory sting
+- README/DECISIONS stub updated (toggles no longer silent)
+
+**Residual:** 60–90s recording still compresses a 25-min war; phone More is one extra tap versus Polytopia’s four-disc strip.
+
+---
