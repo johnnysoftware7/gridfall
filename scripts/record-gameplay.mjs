@@ -239,6 +239,21 @@ async function playthrough(page) {
   await page.keyboard.press("t");
   await hold(page, 1200);
 
+  // Settings: Music / SFX toggles actually start the authored bed.
+  await page.evaluate(() => {
+    const api = /** @type {any} */ (window).__GRIDFALL__;
+    api.goto("settings");
+  });
+  await hold(page, 900);
+  await page.locator("#m").click();
+  await hold(page, 1100);
+  await page.locator("#s").click();
+  await hold(page, 500);
+  await page.locator("#s").click();
+  await hold(page, 400);
+  await page.locator("#back").click();
+  await hold(page, 800);
+
   // Harvest fruit (Helix + Logistics) or train a Trooper if Energy allows.
   info = await gameInfo(page);
   if (info?.harvests[0] && (info.energy ?? 0) >= 2) {
@@ -307,7 +322,29 @@ async function playthrough(page) {
     await hold(page, 900);
   }
 
-  // Final look at the progressed board.
+  // Fast-forward into mid-late war so navy / beacons / density read on camera.
+  await page.evaluate(() => {
+    const api = /** @type {any} */ (window).__GRIDFALL__;
+    for (let i = 0; i < 12; i++) {
+      const st = api.state();
+      if (!st || st.over) break;
+      const cmds = api.chooseCommands(st).filter((c) => c.type !== "endTurn");
+      for (const c of cmds) api.apply(c);
+      if (!api.state().over) api.apply({ type: "endTurn" });
+    }
+  });
+  await hold(page, 2200);
+  const late = await gameInfo(page);
+  const navy = late?.units.find((u) => /skiff|hover|hull|levi|ghost|bomb/i.test(u.type));
+  const show = navy ?? late?.units[0];
+  if (show) {
+    await page.evaluate((id) => {
+      const api = /** @type {any} */ (window).__GRIDFALL__;
+      api.selectUnit(id);
+    }, show.id);
+    await tapTile(page, show.x, show.y);
+    await hold(page, 2200);
+  }
   await hold(page, 2800);
 }
 

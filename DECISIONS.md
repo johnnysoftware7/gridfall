@@ -37,7 +37,7 @@ Sources win. When the prompt and the 2026-09-26 wiki / screenshots / replays dis
 
 ## Scope stubs (visible in-game, listed in README)
 
-- Audio: Settings has Music / SFX toggles; there is no soundtrack (original audio was never composed).
+- Audio: Settings Music / SFX toggles drive an authored WebAudio SFX set (select, move, attack, harvest, research, victory, …) and a light original pad bed. No Polytopia samples.
 - Lighthouse / corner beacons: drawn as map-edge markers (S8) but are cosmetic.
 - Multiplayer “Waiting for…” bar: not used (single-player).
 - Special-tribe units (Amphibian, Mooni, Hexapod, …) are out of scope — GRIDFALL only ships the five regular-faction mirrors.

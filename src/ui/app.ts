@@ -2,7 +2,7 @@ import { FACTIONS, FACTION_ORDER } from "../data/factions";
 import { TECH_LIST, canResearch, techCost, techDef } from "../data/techs";
 import { UNITS, unitDef } from "../data/units";
 import { chooseCommands, runAiTurn } from "../ai/choose";
-import { playSfx, setSfx } from "../audio/sfx";
+import { playSfx, setMusic, setSfx } from "../audio/sfx";
 import { SAVE_KEY } from "../data/constants";
 import { createGame } from "../engine/createGame";
 import { dispatch, legalTileActions } from "../engine/actions";
@@ -30,6 +30,7 @@ export interface UiState {
   selectedTile: { x: number; y: number } | null;
   music: boolean;
   sfx: boolean;
+  moreOpen: boolean;
   hover: { x: number; y: number } | null;
   coached: boolean;
   banner: string;
@@ -49,6 +50,7 @@ const ui: UiState = {
   selectedTile: null,
   music: false,
   sfx: true,
+  moreOpen: false,
   hover: null,
   coached: false,
   banner: "",
@@ -66,6 +68,13 @@ export function mount(el: HTMLElement): void {
   window.addEventListener("keydown", onKey);
   window.addEventListener("resize", () => {
     if (ui.screen === "game" || ui.screen === "tech") paintBoard();
+  });
+  window.addEventListener("pointerdown", (e) => {
+    if (!ui.moreOpen) return;
+    const br = appEl?.querySelector("#br");
+    if (br && br.contains(e.target as Node)) return;
+    ui.moreOpen = false;
+    if (ui.screen === "game") paintHud();
   });
   requestAnimationFrame(tick);
   expose();
@@ -129,6 +138,8 @@ function renderFaction(): void {
           ui.game = parsed.game;
           ui.screen = "game";
           ui.cam = focusCapital(parsed.game, 0);
+          setSfx(ui.sfx);
+          setMusic(ui.music);
           playSfx("ui");
           render();
         });
@@ -229,6 +240,8 @@ function startGame(): void {
   ui.selected = startU?.id ?? null;
   ui.coached = false;
   ui.screen = "game";
+  setSfx(ui.sfx);
+  setMusic(ui.music);
   save();
   render();
   showBanner("GRIDFALL", FACTIONS[ui.faction].name, 1200);
@@ -356,6 +369,12 @@ function apply(cmd: Command): void {
     if (prev && c.owner === 0 && c.progress > prev.progress) {
       floatText(c.x, c.y, `+XP`, "#7ecbff");
     }
+    if (c.owner === 0 && c.monument && prev && !prev.monument) {
+      playSfx("wonder");
+      burst(c.x, c.y, "#f5d76e", 20);
+      floatText(c.x, c.y, "WONDER", "#f5d76e");
+      punch(7);
+    }
   }
   if (cmd.type === "move" || cmd.type === "harvest" || cmd.type === "train") ui.coached = true;
   if (ui.game.pendingLevelUp && ui.game.currentPlayer === 0) {
@@ -438,6 +457,23 @@ function juice(cmd: Command, g: GameState): void {
     punch(6);
   } else if (cmd.type === "endTurn") {
     playSfx("end");
+  } else if (cmd.type === "build") {
+    const kind = String(cmd.kind);
+    if (kind === "beacon" || kind.endsWith("Beacon")) {
+      playSfx("wonder");
+      burst(cmd.x, cmd.y, "#e8f6ff", 18);
+      floatText(cmd.x, cmd.y, "BEACON", "#e8f6ff");
+    } else if (kind === "dock") {
+      playSfx("train");
+      burst(cmd.x, cmd.y, "#7ecbff", 10);
+    }
+  } else if (cmd.type === "upgradeNaval") {
+    playSfx("train");
+    const u = g.units.find((x) => x.id === cmd.unitId);
+    if (u) {
+      burst(u.x, u.y, "#7ffff6", 12);
+      floatText(u.x, u.y, "HULL UP", "#7ffff6");
+    }
   }
 }
 
@@ -527,13 +563,27 @@ function paintHud(): void {
   const br = appEl.querySelector("#br");
   if (br) {
     br.innerHTML = `
-      <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap">Settings</div></button>
-      <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap">Game Stats</div></button>
-      <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap">Tech Tree</div></button>
-      <button class="round-btn" id="nextunit"><div class="disc">⟳</div><div class="cap">Next Unit</div></button>
-      <button class="round-btn ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap">End Turn</div></button>`;
+      <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap"><span class="full">Settings</span><span class="short">Set</span></div></button>
+      <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap"><span class="full">Game Stats</span><span class="short">Stats</span></div></button>
+      <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap"><span class="full">Tech Tree</span><span class="short">Tech</span></div></button>
+      <button class="round-btn" id="more"><div class="disc">···</div><div class="cap">More</div></button>
+      <button class="round-btn primary" id="nextunit"><div class="disc">⟳</div><div class="cap"><span class="full">Next Unit</span><span class="short">Next</span></div></button>
+      <button class="round-btn primary ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap"><span class="full">End Turn</span><span class="short">End</span></div></button>
+      <div class="more-pop ${ui.moreOpen ? "open" : ""}" id="morepop">
+        <button data-go="settings">☰ Settings</button>
+        <button data-go="stats">◉ Game Stats</button>
+      </div>`;
     br.querySelectorAll("[data-go]").forEach((b) => {
-      b.addEventListener("click", () => { ui.screen = b.getAttribute("data-go") as UiState["screen"]; paint(); });
+      b.addEventListener("click", () => {
+        ui.moreOpen = false;
+        ui.screen = b.getAttribute("data-go") as UiState["screen"];
+        paint();
+      });
+    });
+    br.querySelector("#more")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      ui.moreOpen = !ui.moreOpen;
+      paintHud();
     });
     br.querySelector("#nextunit")!.addEventListener("click", () => cycleIdleUnit());
     br.querySelector("#endturn")!.addEventListener("click", () => apply({ type: "endTurn" }));
@@ -731,7 +781,7 @@ function runSel(u: Unit, cmd: string): void {
 function paintToasts(): void {
   const el = appEl.querySelector("#toasts");
   if (!el || !ui.game) return;
-  el.innerHTML = ui.game.toasts.slice(-3).map((t) => `<div class="toast"><b>${t.title}</b><span>${t.body}</span></div>`).join("");
+  el.innerHTML = ui.game.toasts.slice(-2).map((t) => `<div class="toast"><b>${t.title}</b><span>${t.body}</span></div>`).join("");
 }
 
 function paintOverlay(): void {
@@ -763,10 +813,16 @@ function paintOverlay(): void {
     el.innerHTML = `<div class="overlay" data-screen="settings"><button class="back-arrow" id="back">‹</button><div class="panel"><h3>Settings</h3>
       <div class="row">Music <button class="chip ${ui.music ? "on" : ""}" id="m">${ui.music ? "on" : "off"}</button></div>
       <div class="row">SFX <button class="chip ${ui.sfx ? "on" : ""}" id="s">${ui.sfx ? "on" : "off"}</button></div>
+      <p class="level-sub">Original WebAudio bed — select, move, attack, harvest, research, victory. Light tide pad when Music is on.</p>
       <button class="play-btn" id="resign">Resign</button>
     </div></div>`;
     el.querySelector("#back")!.addEventListener("click", () => { ui.screen = "game"; paint(); });
-    el.querySelector("#m")!.addEventListener("click", () => { ui.music = !ui.music; paintChrome(); });
+    el.querySelector("#m")!.addEventListener("click", () => {
+      ui.music = !ui.music;
+      setMusic(ui.music);
+      if (ui.music) playSfx("ui");
+      paintChrome();
+    });
     el.querySelector("#s")!.addEventListener("click", () => {
       ui.sfx = !ui.sfx;
       setSfx(ui.sfx);
@@ -944,6 +1000,8 @@ function renderEnd(): void {
       <div class="row"><span>Wonders</span><span>${you.b.wonders}</span></div>
       <button class="play-btn" id="again">Again</button>
     </div></div>`;
+  if (youWin) playSfx("victory");
+  else playSfx("end");
   appEl.querySelector("#again")!.addEventListener("click", () => {
     localStorage.removeItem(SAVE_KEY);
     ui.game = null;
@@ -972,6 +1030,7 @@ function save(): void {
 
 function expose(): void {
   setSfx(ui.sfx);
+  setMusic(ui.music);
   (window as unknown as { __GRIDFALL__: unknown }).__GRIDFALL__ = {
     ui,
     start: (opts?: Partial<typeof ui>) => {
