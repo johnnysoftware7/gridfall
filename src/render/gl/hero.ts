@@ -1,19 +1,13 @@
 import * as THREE from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { FACTIONS } from "../../data/factions";
 import type { FactionId } from "../../engine/types";
 import { buildHero } from "./mechs";
-import { factionAccent, glow, makeDarkEnv, metal } from "./palette";
+import { factionAccent, makeDarkEnv, metal } from "./palette";
 
 interface Hero {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
-  composer: EffectComposer;
-  bloom: UnrealBloomPass;
   hero: THREE.Group;
   canvas: HTMLCanvasElement;
   faction: FactionId;
@@ -31,53 +25,46 @@ export function paintHeroScene(canvas: HTMLCanvasElement, faction: FactionId, mo
   const ht = Math.max(1, r.height);
 
   if (!h || h.canvas !== canvas) {
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 1.12;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const scene = new THREE.Scene();
     scene.environment = makeDarkEnv(renderer);
-    scene.environmentIntensity = 0.7;
-    const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 80);
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(w, ht), 0.55, 0.34, 0.78);
-    composer.addPass(bloom);
-    composer.addPass(new OutputPass());
-    h = { renderer, scene, camera, composer, bloom, hero: new THREE.Group(), canvas, faction, mood: "" };
+    scene.environmentIntensity = 0.85;
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 80);
+    h = { renderer, scene, camera, hero: new THREE.Group(), canvas, faction, mood: "" };
     heroes.set(canvas, h);
   }
 
   h.renderer.setSize(w, ht, false);
-  h.composer.setSize(w, ht);
-  h.bloom.resolution.set(w, ht);
   h.camera.aspect = w / ht;
   h.camera.updateProjectionMatrix();
-  h.camera.position.set(2.15, 2.05, 6.4);
-  h.camera.lookAt(0, 1.85, 0);
+  h.camera.position.set(3.4, 2.35, 7.6);
+  h.camera.lookAt(0, 1.7, 0);
 
   if (h.faction !== faction || h.mood !== mood) {
     h.scene.clear();
     const bg = mood === "win" ? "#180806" : mood === "lose" ? "#07040a" : "#03060c";
     h.scene.background = new THREE.Color(bg);
-    h.scene.fog = new THREE.FogExp2(bg, 0.045);
-    h.scene.add(new THREE.HemisphereLight(mood === "win" ? "#ffb070" : "#9ad4ff", "#08060a", 0.45));
-    const key = new THREE.DirectionalLight("#fff2d8", 2.4);
+    h.scene.fog = new THREE.FogExp2(bg, 0.038);
+    h.scene.add(new THREE.HemisphereLight(mood === "win" ? "#ffb070" : "#9ad4ff", "#08060a", 0.5));
+    const key = new THREE.DirectionalLight("#fff6ea", 2.8);
     key.position.set(4, 8, 4);
     key.castShadow = true;
     h.scene.add(key);
-    const rim = new THREE.DirectionalLight(accent, 1.8);
+    const fill = new THREE.DirectionalLight("#c8e8ff", 1.1);
+    fill.position.set(-2, 5, 6);
+    h.scene.add(fill);
+    const rim = new THREE.DirectionalLight(accent, 1.35);
     rim.position.set(-6, 3.2, -2);
     h.scene.add(rim);
-    const kick = new THREE.PointLight(accent, 2.2, 12, 1.6);
-    kick.position.set(0.4, 2.4, 1.6);
-    h.scene.add(kick);
-    hexFloor(h.scene, mood === "win" ? "#2a120e" : "#071018", accent);
+    hexFloor(h.scene, mood === "win" ? "#2a120e" : "#0c2030", accent);
     const mech = buildHero(faction, fac.color);
-    mech.scale.setScalar(1.05);
+    mech.scale.setScalar(1.12);
     mech.position.set(0.05, 0.02, -0.15);
     h.scene.add(mech);
     h.hero = mech;
@@ -85,12 +72,12 @@ export function paintHeroScene(canvas: HTMLCanvasElement, faction: FactionId, mo
     h.mood = mood;
   }
   h.hero.rotation.y = (typeof performance !== "undefined" ? performance.now() : 0) * 0.00038;
-  h.composer.render();
+  h.renderer.render(h.scene, h.camera);
 }
 
 function hexFloor(scene: THREE.Scene, color: string, accent: string): void {
-  const mat = metal(color, 0.82, 0.18);
-  const edge = new THREE.LineBasicMaterial({ color: accent, transparent: true, opacity: 0.55 });
+  const mat = metal(color, 0.88, 0.16);
+  const edge = new THREE.LineBasicMaterial({ color: accent, transparent: true, opacity: 0.85 });
   const hex = new THREE.CylinderGeometry(0.6, 0.6, 0.1, 6);
   hex.rotateY(Math.PI / 6);
   const edges = new THREE.EdgesGeometry(hex);
@@ -108,10 +95,6 @@ function hexFloor(scene: THREE.Scene, color: string, accent: string): void {
       scene.add(line);
     }
   }
-  const wash = new THREE.Mesh(new THREE.CircleGeometry(14, 32), glow(accent, 0.18));
-  wash.rotation.x = -Math.PI / 2;
-  wash.position.y = -0.2;
-  scene.add(wash);
 }
 
 export function paintMedal(canvas: HTMLCanvasElement, faction: FactionId): void {

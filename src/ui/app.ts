@@ -81,6 +81,10 @@ export function mount(el: HTMLElement): void {
 }
 
 function tick(now: number): void {
+  if ((window as unknown as { __GRIDFALL_FREEZE?: boolean }).__GRIDFALL_FREEZE) {
+    requestAnimationFrame(tick);
+    return;
+  }
   fx.now = now;
   tickFx(16);
   if (!dragging) {
@@ -1055,6 +1059,16 @@ function expose(): void {
     selectUnit: (id: string) => { ui.selected = id; paint(); },
     goto: (s: UiState["screen"]) => { ui.screen = s; if (s === "faction" || s === "setup" || s === "end") render(); else paint(); },
     worldToScreen: (x: number, y: number) => projectTile(x, y, 0.4),
+    aim: (x: number, y: number, zoom: number) => {
+      ui.cam.x = x;
+      ui.cam.y = y;
+      ui.cam.zoom = zoom;
+      camGoal.x = x;
+      camGoal.y = y;
+      camGoal.zoom = zoom;
+    },
+    fx,
+    paint: () => paint(),
   };
 }
 

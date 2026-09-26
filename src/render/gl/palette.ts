@@ -74,19 +74,17 @@ export function metal(color: string, metalness = 0.86, rough = 0.2): THREE.MeshP
 }
 
 export function glow(color: string, int = 1.4): THREE.MeshPhysicalMaterial {
-  return physical({ color, metal: 0.15, rough: 0.16, emit: color, emitInt: int, clearcoat: 0.4 });
+  return physical({ color, metal: 0.2, rough: 0.18, emit: color, emitInt: Math.min(1.15, int * 0.45), clearcoat: 0.35 });
 }
 
 export function ice(color: string, accent: string, bias = 0.45): THREE.MeshPhysicalMaterial {
   return physical({
     color,
-    metal: 0.18,
-    rough: 0.08,
+    metal: 0.42 + bias * 0.15,
+    rough: 0.1,
     emit: accent,
-    emitInt: 0.22 + bias * 0.2,
+    emitInt: 0.05 + bias * 0.04,
     clearcoat: 1,
-    transmission: 0.42 + bias * 0.2,
-    thickness: 1.1,
   });
 }
 

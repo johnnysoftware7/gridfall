@@ -31,7 +31,7 @@ Sources win. When the prompt and the 2026-09-26 wiki / screenshots / replays dis
 ## Skin / UX
 
 24. **No Polytopia names, art, fonts, or audio in the build.** Inter / system-ui only.
-25. **View layer is Three.js WebGL (2026-09-26 art pass).** Canvas 2D could not hit the Futuretopia bar (beveled glossy cubes, metal mechs, point lights, real thickness). `src/engine/` stays deterministic and renderer-agnostic. Board + trailer heroes render with MeshPhysicalMaterial, ACES tonemap, dark custom PMREM, UnrealBloom, soft shadows. Overlay canvas still draws HP / city names / damage floats. Old `src/render/art/` 2D paths are leftover and unused by the live board.
+25. **View layer is Three.js WebGL (2026-09-26 art pass).** Canvas 2D could not hit the Futuretopia bar (beveled glossy cubes, metal mechs, point lights, real thickness). `src/engine/` stays deterministic and renderer-agnostic. Board + trailer heroes render with MeshPhysicalMaterial, ACES tonemap, a dark custom PMREM, and soft shadows. UnrealBloom was tried and removed — it blew tiles and the hero into a white blob on the live board. Overlay canvas still draws HP / city names / damage floats. Old `src/render/art/` 2D paths are leftover and unused by the live board.
 26. **Tech toast copy** follows the replay: “\<faction\> discovered the secret of \<tech\>.”
 27. **When unsure about a mid-game panel not in S1–S8,** match the replay, then the wiki, then the prompt.
 

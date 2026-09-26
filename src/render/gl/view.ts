@@ -1,9 +1,5 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { FACTIONS } from "../../data/factions";
 import { TILE_H, TILE_W } from "../../data/constants";
 import { canAct } from "../../engine/movement";
@@ -26,8 +22,6 @@ interface Handle {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   camera: THREE.OrthographicCamera;
-  composer: EffectComposer;
-  bloom: UnrealBloomPass;
   dir: THREE.DirectionalLight;
   tiles: THREE.Group;
   props: THREE.Group;
@@ -49,19 +43,19 @@ const look = new THREE.Vector3();
 export function attachBoard(canvas: HTMLCanvasElement): Handle {
   if (handle && handle.renderer.domElement === canvas) return handle;
   disposeBoard();
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.92;
+  renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#02040a");
   scene.fog = new THREE.FogExp2("#03050c", 0.014);
   scene.environment = makeDarkEnv(renderer);
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.75;
 
   const camera = new THREE.OrthographicCamera(-8, 8, 6, -6, 0.1, 80);
   scene.add(new THREE.HemisphereLight("#6a9cff", "#100808", 0.38));
@@ -92,14 +86,8 @@ export function attachBoard(canvas: HTMLCanvasElement): Handle {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(800, 600), 0.38, 0.28, 0.84);
-  composer.addPass(bloom);
-  composer.addPass(new OutputPass());
-
   handle = {
-    renderer, scene, camera, composer, bloom, dir, tiles, props, actors, marks, fxg,
+    renderer, scene, camera, dir, tiles, props, actors, marks, fxg,
     tileMesh: [], units: new Map(), size: 0, seed: -1, propKey: "",
   };
   return handle;
@@ -117,8 +105,6 @@ export function drawBoardGL(canvas: HTMLCanvasElement, state: GameState, cam: Ca
   const w = Math.max(1, r.width);
   const ht = Math.max(1, r.height);
   h.renderer.setSize(w, ht, false);
-  h.composer.setSize(w, ht);
-  h.bloom.resolution.set(w, ht);
   syncTiles(h, state, view.pid);
   syncProps(h, state, view.pid);
   syncUnits(h, state, view);
@@ -128,7 +114,7 @@ export function drawBoardGL(canvas: HTMLCanvasElement, state: GameState, cam: Ca
   h.dir.position.set(look.x + 10, 14, look.z + 6);
   h.dir.target.position.copy(look);
   h.dir.target.updateMatrixWorld();
-  h.composer.render();
+  h.renderer.render(h.scene, h.camera);
 }
 
 export function pickBoard(canvas: HTMLCanvasElement, sx: number, sy: number, size: number): { x: number; y: number } | null {
@@ -197,7 +183,7 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
         mesh.add(cap);
         const fogBox = new THREE.Mesh(
           new THREE.BoxGeometry(0.96, 0.62, 0.96),
-          physical({ color: "#070910", metal: 0.15, rough: 0.75, opacity: 0.94, emit: "#0a1520", emitInt: 0.08 }),
+          physical({ color: "#1a1e28", metal: 0.28, rough: 0.55, opacity: 0.96, emit: "#0c1824", emitInt: 0.06 }),
         );
         fogBox.position.y = 0.55;
         fogBox.visible = false;
@@ -220,19 +206,19 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     let rough = lookT.rough;
     if (t.owner !== null && explored) {
       const fac = FACTIONS[state.players[t.owner].faction];
-      top = mixHex("#b8bcc8", fac.color, 0.16);
-      metalness = 0.78;
-      rough = 0.14;
+      top = mixHex("#8c90a0", fac.color, 0.18);
+      metalness = 0.7;
+      rough = 0.2;
     }
     const mat = mesh.material as THREE.MeshPhysicalMaterial;
-    mat.color.set(explored ? top : "#05070c");
-    mat.metalness = explored ? metalness : 0.18;
-    mat.roughness = explored ? rough : 0.72;
+    mat.color.set(explored ? top : "#2a3140");
+    mat.metalness = explored ? metalness : 0.35;
+    mat.roughness = explored ? rough : 0.48;
     mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a3040" : "#000");
     mat.emissiveIntensity = explored && (t.terrain === "shelf" || t.terrain === "deep")
-      ? 0.2 + Math.sin(tnow * 0.003 + x + y) * 0.06
+      ? 0.1 + Math.sin(tnow * 0.003 + x + y) * 0.03
       : lookT.emit;
-    const hgt = explored ? lookT.h : 0.55;
+    const hgt = explored ? lookT.h : 0.62;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
@@ -297,6 +283,7 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital);
+      sp.scale.setScalar(city.isCapital ? 1.85 : 1.4);
       sp.position.set(t.x, lift, t.y);
       h.props.add(sp);
       if (city.monument) {
@@ -353,7 +340,7 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const y = hop ? hop.y : u.y;
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
-    g.scale.setScalar(u.type === "titan" || u.type === "leviathan" ? 2.15 : 1.95);
+    g.scale.setScalar(u.type === "titan" || u.type === "leviathan" ? 2.7 : 2.45);
     g.position.set(x, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y);
     const idle = u.owner === view.pid && canAct(u);
     g.position.y += idle ? Math.sin((fx.now || 0) * 0.006 + u.x) * 0.03 : 0;
@@ -371,7 +358,7 @@ function syncMarks(h: Handle, view: BoardView): void {
   h.marks.clear();
   const pulse = 0.55 + Math.sin((fx.now || 0) * 0.008) * 0.25;
   for (const m of view.moves) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.05, 8, 24), glow("#4da3ff", 1.35 + pulse));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.05, 8, 24), glow("#4da3ff", 0.9 + pulse * 0.35));
     ring.rotation.x = Math.PI / 2;
     ring.position.set(m.x, 0.44, m.y);
     h.marks.add(ring);

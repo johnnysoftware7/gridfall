@@ -182,21 +182,19 @@ John: artwork is the #1 gap; Codex/Claude peers destroy the old 2D look. Bar = a
 John's Futuretopia stills remain the bar. Cycle 7 stills were studio-lit cube people — that 8.7 was still generous.
 
 **Shipped this cycle:**
-- Ice/crystal hero with shoulder spikes, visor slit, chest core + point light
-- Hex-grid trailer floor, title over the mech, medals on a frosted bottom bar
-- Dark custom PMREM (no bright RoomEnvironment wash) + UnrealBloom
-- Units: wide stance, pauldrons, faction crests, dark hull + ice plates
-- Cities: larger crystal clusters, capital ring + light
+- Ice-crystal trailer hero (faceted torso, shoulder/helmet shards) on a hex floor; title over the chest; medals on a frosted bottom bar
+- Dark custom PMREM + ACES (bloom was tried and pulled — it blew the board into a white blob)
+- Units: dark hull, faction visor, pauldrons, crests; cities scaled as crystal clusters
 - Fog blocks, faction fence glow, connected maglev strips
-- Combat: 48px orange floats, ☠ + octahedron skull, bigger square bursts
-- Victory card: Rematch / Main Menu over the hero
+- Combat overlay: large orange floats, ☠ + square bursts
+- Victory card: Rematch / Main Menu
 
 | Axis | Score | Evidence |
 |---|---|---|
-| Graphics | 8.9 | Second sculpt is in the same sport as the attached bar (dark glossy tiles, ice mech language, bloom). Still not a 9.0 until stills prove the hero silhouette and combat juice hold a side-by-side. |
-| Playability | 8.8 | HUD / marks / helpers unchanged. |
-| Fun | 8.5 | Combat numbers and skulls are louder. Not the focus. |
+| Graphics | 7.8 | Honest vs the attached Futuretopia stills. Menu is in the same sport (ice figure, hex floor, trailer title). Board tiles are glossy cubes with thickness. Units and Command Spires still lose a side-by-side — they read small against the plates, not as metal mechs / glowing crystal cities. 8.3 and 8.7 from earlier cycles were too generous. 9.0 would be a lie. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. Raycast pick. |
+| Fun | 8.4 | Combat numbers and skulls are louder when they land. Not the focus of this run. |
 
-**Residual vs the bar:** need live stills of faction / city closeup / combat to confirm the ice hero is no longer a mannequin and that damage floats read like the reference.
+**Residual vs the bar:** hero still simpler than the reference ice sculpture; board units need more readable silhouette at play zoom; cities need more interior glow; combat juice is easy to miss on the overlay.
 
 ---

@@ -46,12 +46,12 @@ function mats(faction: FactionId, color: string) {
   const crystalBias = faction === "meridian" ? 0.18 : faction === "ashfall" ? 0.32 : 0.5;
   return {
     accent,
-    hull: metal("#12161c", 0.9, 0.18),
-    dark: metal("#08090c", 0.82, 0.28),
+    hull: metal("#2a313c", 0.88, 0.2),
+    dark: metal("#16181e", 0.8, 0.3),
     plate: metal(color, 0.74, 0.2),
-    visor: glow(accent, 2.6),
+    visor: glow(accent, 1.6),
     ice: ice(tint, accent, crystalBias),
-    core: glow(accent, 3.2),
+    core: glow(accent, 1.8),
   };
 }
 
@@ -67,6 +67,10 @@ export function buildMech(type: UnitType, faction: FactionId, color: string): TH
   const scale = type === "titan" ? 1.28 : type === "bulwark" || type === "vanguard" ? 1.12 : 1;
   g.scale.setScalar(scale);
 
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.45 }));
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.01;
+  g.add(shadow);
   g.add(box(0.13, 0.26, 0.14, m.dark, -0.12, 0.14, 0.04));
   g.add(box(0.13, 0.26, 0.14, m.dark, 0.12, 0.14, 0.04));
   g.add(box(0.15, 0.07, 0.18, m.hull, -0.12, 0.04, 0.06));
@@ -154,47 +158,50 @@ function naval(g: THREE.Group, type: UnitType, m: ReturnType<typeof mats>): void
 export function buildHero(faction: FactionId, color: string): THREE.Group {
   const g = new THREE.Group();
   const m = mats(faction, color);
-  const plateIce = faction === "meridian" ? m.plate : m.ice;
-
-  g.add(box(0.55, 1.15, 0.48, m.dark, -0.34, 0.58, 0.02));
-  g.add(box(0.55, 1.15, 0.48, m.dark, 0.34, 0.58, 0.02));
-  g.add(box(0.62, 0.22, 0.56, m.hull, -0.34, 0.08, 0.06));
-  g.add(box(0.62, 0.22, 0.56, m.hull, 0.34, 0.08, 0.06));
-  g.add(box(0.42, 0.55, 0.42, plateIce, -0.34, 0.42, 0.08));
-  g.add(box(0.42, 0.55, 0.42, plateIce, 0.34, 0.42, 0.08));
-  g.add(spike(m.ice, -0.34, 1.22, 0.02, 0.28, 0.12, -0.15));
-  g.add(spike(m.ice, 0.34, 1.22, 0.02, 0.28, 0.12, 0.15));
-
-  g.add(box(0.95, 0.28, 0.62, m.plate, 0, 1.18, 0));
-  g.add(box(1.22, 1.42, 0.72, m.hull, 0, 1.95, 0));
-  g.add(box(0.95, 0.85, 0.22, plateIce, 0, 2.02, 0.32));
-  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), m.core);
-  core.position.set(0, 1.98, 0.4);
-  g.add(core);
-  const heart = new THREE.PointLight(m.accent, 3.4, 8, 1.6);
-  heart.position.set(0, 2.05, 0.5);
-  g.add(heart);
+  const shell = ice(iceTint(faction), factionAccent(faction), 0.62);
+  shell.color.offsetHSL(0, 0.05, 0.12);
+  const joint = m.dark;
 
   for (const sx of [-1, 1] as const) {
-    const arm = box(0.42, 1.28, 0.42, m.hull, sx * 0.92, 1.72, 0, 0, 0, sx * -0.2);
-    g.add(arm);
-    g.add(box(0.48, 0.42, 0.48, plateIce, sx * 1.12, 1.12, 0.08));
-    g.add(box(0.52, 0.36, 0.52, m.dark, sx * 1.18, 0.86, 0.1));
-    const pauldron = box(0.62, 0.38, 0.58, plateIce, sx * 0.88, 2.55, 0.02);
-    g.add(pauldron);
-    g.add(spike(m.ice, sx * 0.95, 2.95, -0.04, 0.55, 0.16, sx * -0.35));
-    g.add(spike(m.ice, sx * 1.12, 2.78, 0.1, 0.36, 0.12, sx * -0.55));
-    g.add(crystal(m.ice, sx * 0.72, 2.72, -0.18, 0.32, 0.12, 0.2, sx * 0.4));
+    g.add(box(0.5, 1.2, 0.46, shell, sx * 0.32, 0.62, 0.04));
+    g.add(box(0.56, 0.2, 0.52, joint, sx * 0.32, 0.08, 0.08));
+    g.add(spike(shell, sx * 0.34, 1.28, 0.02, 0.32, 0.13, sx * 0.12));
   }
 
-  g.add(box(0.62, 0.52, 0.58, m.hull, 0, 2.86, 0.04));
-  g.add(box(0.7, 0.42, 0.42, plateIce, 0, 3.12, 0.08));
-  g.add(box(0.48, 0.1, 0.1, m.visor, 0, 3.1, 0.32));
-  g.add(spike(m.ice, 0.18, 3.58, -0.04, 0.72, 0.18, 0.22));
-  g.add(spike(m.ice, -0.22, 3.42, -0.12, 0.48, 0.14, -0.4));
-  g.add(crystal(m.ice, 0.42, 3.05, -0.08, 0.38, 0.12, 0.3, 0.5));
-  g.add(crystal(m.ice, -0.08, 2.2, -0.28, 0.55, 0.16, -0.4, 0));
-  g.add(crystal(m.ice, 0.22, 1.55, -0.24, 0.36, 0.12, 0.5, 0.2));
+  const torso = new THREE.Mesh(new THREE.IcosahedronGeometry(0.78, 0), shell);
+  torso.scale.set(0.92, 1.18, 0.62);
+  torso.position.set(0, 1.95, 0);
+  torso.castShadow = true;
+  g.add(torso);
+  g.add(box(0.88, 0.22, 0.55, shell, 0, 1.22, 0.02));
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), m.core);
+  core.position.set(0, 1.95, 0.38);
+  g.add(core);
+
+  for (const sx of [-1, 1] as const) {
+    g.add(box(0.4, 1.32, 0.4, shell, sx * 0.95, 1.7, 0, 0, 0, sx * -0.22));
+    g.add(box(0.5, 0.38, 0.5, joint, sx * 1.16, 0.92, 0.1));
+    const pad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 0), shell);
+    pad.scale.set(1.1, 0.7, 0.85);
+    pad.position.set(sx * 0.82, 2.58, 0.04);
+    pad.castShadow = true;
+    g.add(pad);
+    g.add(spike(shell, sx * 0.92, 3.05, -0.02, 0.7, 0.18, sx * -0.38));
+    g.add(spike(shell, sx * 1.1, 2.82, 0.12, 0.42, 0.13, sx * -0.6));
+    g.add(crystal(shell, sx * 0.68, 2.78, -0.2, 0.4, 0.14, 0.25, sx * 0.45));
+  }
+
+  const helm = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 0), shell);
+  helm.scale.set(0.95, 0.85, 0.8);
+  helm.position.set(0, 3.05, 0.08);
+  helm.castShadow = true;
+  g.add(helm);
+  g.add(box(0.46, 0.08, 0.08, m.visor, 0, 3.04, 0.34));
+  g.add(spike(shell, 0.16, 3.62, -0.02, 0.82, 0.2, 0.2));
+  g.add(spike(shell, -0.2, 3.42, -0.1, 0.52, 0.15, -0.42));
+  g.add(crystal(shell, 0.38, 3.1, -0.08, 0.42, 0.13, 0.3, 0.55));
+  g.add(crystal(shell, -0.06, 2.15, -0.32, 0.62, 0.17, -0.35, 0));
+  g.add(crystal(shell, 0.2, 1.48, -0.26, 0.4, 0.13, 0.55, 0.15));
 
   return g;
 }
@@ -208,27 +215,28 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean):
   g.add(box(0.36, 0.1, 0.36, m.hull, 0, 0.26, 0));
   const shards = capital
     ? [
-        [0, 0.95, 0, 1.15, 0.18],
-        [0.18, 0.62, 0.1, 0.62, 0.12],
-        [-0.16, 0.58, -0.12, 0.55, 0.11],
-        [0.04, 0.5, 0.2, 0.44, 0.1],
-        [-0.2, 0.42, 0.08, 0.36, 0.09],
-        [0.14, 0.4, -0.16, 0.34, 0.09],
+        [0, 1.35, 0, 1.7, 0.22],
+        [0.2, 0.82, 0.12, 0.85, 0.14],
+        [-0.18, 0.76, -0.14, 0.78, 0.13],
+        [0.06, 0.68, 0.22, 0.58, 0.12],
+        [-0.22, 0.58, 0.1, 0.48, 0.11],
+        [0.16, 0.55, -0.18, 0.46, 0.11],
       ]
     : [
-        [0, 0.62, 0, 0.72, 0.14],
-        [0.14, 0.42, 0.1, 0.4, 0.1],
-        [-0.12, 0.4, -0.08, 0.36, 0.09],
+        [0, 0.82, 0, 0.95, 0.16],
+        [0.16, 0.52, 0.12, 0.5, 0.11],
+        [-0.14, 0.5, -0.1, 0.46, 0.1],
       ];
+  const glass = glow(m.accent, 1.35);
   for (const [x, y, z, h, s] of shards) {
-    g.add(crystal(m.ice, x, y, z, h, s));
+    g.add(crystal(glass, x, y, z, h, s));
   }
   if (capital) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.028, 8, 24), m.core);
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.78;
     g.add(ring);
-    const light = new THREE.PointLight(m.accent, 3.4, 7, 1.5);
+    const light = new THREE.PointLight(m.accent, 1.4, 5, 1.6);
     light.position.y = 1.25;
     g.add(light);
   } else {
