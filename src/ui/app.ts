@@ -109,19 +109,40 @@ function paintLandscape(c: HTMLCanvasElement): void {
   c.height = r.height * devicePixelRatio;
   const ctx = c.getContext("2d")!;
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  ctx.fillStyle = "#5a7a4a";
-  ctx.beginPath();
-  ctx.moveTo(0, r.height * 0.45);
-  ctx.lineTo(r.width * 0.2, r.height * 0.2);
-  ctx.lineTo(r.width * 0.35, r.height * 0.42);
-  ctx.lineTo(r.width * 0.55, r.height * 0.12);
-  ctx.lineTo(r.width * 0.75, r.height * 0.4);
-  ctx.lineTo(r.width, r.height * 0.22);
-  ctx.lineTo(r.width, r.height);
-  ctx.lineTo(0, r.height);
-  ctx.fill();
+  const h = r.height;
+  const w = r.width;
+  ctx.fillStyle = "#6b8a4e";
+  mountain(ctx, w * 0.08, h * 0.72, w * 0.22, h * 0.38);
+  ctx.fillStyle = "#5a7a42";
+  mountain(ctx, w * 0.28, h * 0.78, w * 0.2, h * 0.32);
+  ctx.fillStyle = "#7a9a55";
+  mountain(ctx, w * 0.52, h * 0.7, w * 0.28, h * 0.48);
+  ctx.fillStyle = "#4e6e38";
+  mountain(ctx, w * 0.82, h * 0.74, w * 0.24, h * 0.36);
   ctx.fillStyle = "#3a7ca5";
-  ctx.fillRect(0, r.height * 0.62, r.width, r.height);
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.72);
+  ctx.quadraticCurveTo(w * 0.4, h * 0.66, w, h * 0.7);
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.fill();
+  ctx.fillStyle = "#2a5a80";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.78, h * 0.78);
+  ctx.lineTo(w * 0.9, h * 0.62);
+  ctx.lineTo(w * 0.98, h * 0.8);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function mountain(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w * 0.35, y - h);
+  ctx.lineTo(x + w * 0.55, y - h * 0.55);
+  ctx.lineTo(x + w, y);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function renderSetup(): void {
@@ -532,19 +553,19 @@ function paintTechTree(c: HTMLCanvasElement): void {
     const open = canResearch(p.techs, id);
     const cost = techCost(t.tier, cities, literacy);
     ctx.beginPath();
-    ctx.arc(x, y, 18, 0, Math.PI * 2);
-    ctx.fillStyle = have ? "#3db85a" : open && p.energy >= cost ? "#3d8cff" : "#2a2a2a";
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fillStyle = have ? "#3db85a" : open ? "#3d8cff" : "#2a2a2a";
     ctx.fill();
     if (open && !have) {
       ctx.fillStyle = "#fff";
-      ctx.font = "11px system-ui";
+      ctx.font = "bold 12px system-ui";
       ctx.textAlign = "center";
       ctx.fillText(String(cost), x, y + 4);
     }
     ctx.fillStyle = "#fff";
-    ctx.font = "11px system-ui";
+    ctx.font = "12px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText(t.name, x, y + 32);
+    ctx.fillText(t.name, x, y + 34);
     const hit = document.createElement("div");
     void hit;
   }
@@ -563,11 +584,11 @@ function paintTechTree(c: HTMLCanvasElement): void {
 
 function techLayout(cx: number, cy: number): Record<TechId, { x: number; y: number }> {
   const roots: TechId[] = ["tracking", "gravMobility", "logistics", "ridgecraft", "aquaculture"];
-  const angles = [-Math.PI / 2 - 0.55, -Math.PI / 2 + 0.55, 0.35, Math.PI - 0.15, Math.PI + 1.05];
+  const angles = [-Math.PI * 0.72, -Math.PI * 0.28, Math.PI * 0.12, Math.PI * 0.55, Math.PI * 0.95];
   const out = {} as Record<TechId, { x: number; y: number }>;
   roots.forEach((id, i) => {
     const a = angles[i];
-    placeBranch(out, id, cx, cy, a, 92);
+    placeBranch(out, id, cx, cy, a, 100);
   });
   return out;
 }
@@ -576,12 +597,12 @@ function placeBranch(out: Record<TechId, { x: number; y: number }>, root: TechId
   out[root] = { x: cx + Math.cos(ang) * dist, y: cy + Math.sin(ang) * dist };
   const kids = TECH_LIST.filter((id) => techDef(id).parent === root);
   kids.forEach((id, i) => {
-    const spread = kids.length === 1 ? 0 : (i === 0 ? -0.32 : 0.32);
+    const spread = kids.length === 1 ? 0 : (i === 0 ? -0.28 : 0.28);
     const a2 = ang + spread;
-    out[id] = { x: cx + Math.cos(a2) * (dist + 88), y: cy + Math.sin(a2) * (dist + 88) };
+    out[id] = { x: cx + Math.cos(a2) * (dist + 96), y: cy + Math.sin(a2) * (dist + 96) };
     const grand = TECH_LIST.filter((g) => techDef(g).parent === id);
     grand.forEach((g) => {
-      out[g] = { x: cx + Math.cos(a2) * (dist + 176), y: cy + Math.sin(a2) * (dist + 176) };
+      out[g] = { x: cx + Math.cos(a2) * (dist + 192), y: cy + Math.sin(a2) * (dist + 192) };
     });
   });
 }

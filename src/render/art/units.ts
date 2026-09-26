@@ -13,7 +13,8 @@ export function drawUnit(
 ): void {
   const p = iso(x, y);
   ctx.save();
-  ctx.translate(p.x, p.y - 10);
+  ctx.translate(p.x, p.y - 14);
+  ctx.scale(1.25, 1.25);
   if (opts.hidden) ctx.globalAlpha = 0.35;
   if (opts.glow) {
     ctx.shadowColor = "#5ef6ff";

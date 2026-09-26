@@ -91,13 +91,6 @@ export function drawBoard(
   for (const m of view.moves) {
     diamond(ctx, m.x, m.y, "rgba(255,255,255,0.28)", "rgba(255,255,255,0.7)");
   }
-  for (const a of view.attacks) {
-    const ip = iso(a.x, a.y);
-    ctx.fillStyle = "#e23";
-    ctx.beginPath();
-    ctx.arc(ip.x, ip.y, 10, 0, Math.PI * 2);
-    ctx.fill();
-  }
 
   for (const { x, y } of order) {
     if (!p.explored[y * state.size + x]) continue;
@@ -121,6 +114,21 @@ export function drawBoard(
       maxHp: u.maxHp,
       hidden: u.hidden && u.owner === view.pid,
     });
+  }
+
+  for (const a of view.attacks) {
+    const ip = iso(a.x, a.y);
+    ctx.fillStyle = "#e22424";
+    ctx.beginPath();
+    ctx.arc(ip.x, ip.y - 36, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("!", ip.x, ip.y - 31);
   }
 
   for (const { x, y } of order) {
@@ -208,7 +216,7 @@ function drawCityLabel(ctx: CanvasRenderingContext2D, state: GameState, cityId: 
   const inc = city.level + (city.workshop ? 1 : 0) + city.parks + (city.isCapital ? 1 : 0);
   ctx.save();
   ctx.translate(p.x, p.y + 28);
-  ctx.font = "12px system-ui, sans-serif";
+  ctx.font = "14px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.fillStyle = "#fff";
   ctx.strokeStyle = "rgba(0,0,0,0.55)";
@@ -253,7 +261,7 @@ function drawOutpostLabel(ctx: CanvasRenderingContext2D, x: number, y: number): 
 
 export function focusCapital(state: GameState, pid: PlayerId): Camera {
   const c = state.cities.find((x) => x.owner === pid && x.isCapital) ?? state.cities.find((x) => x.owner === pid);
-  if (!c) return { x: 0, y: 0, zoom: 1 };
+  if (!c) return { x: 0, y: 0, zoom: 1.45 };
   const p = iso(c.x, c.y);
-  return { x: p.x, y: p.y, zoom: 1.05 };
+  return { x: p.x, y: p.y, zoom: 1.55 };
 }

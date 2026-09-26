@@ -41,7 +41,7 @@ test("parity screenshots S1 S2 S3 S7 attack", async ({ page }) => {
   await page.evaluate(() => {
     const api = window as unknown as {
       __GRIDFALL__: {
-        apply: (c: object) => void;
+        selectUnit: (id: string) => void;
         state: () => {
           units: { id: string; owner: number; x: number; y: number }[];
           size: number;
@@ -56,7 +56,7 @@ test("parity screenshots S1 S2 S3 S7 attack", async ({ page }) => {
       foe.x = Math.min(st.size - 1, me.x + 1);
       foe.y = me.y;
       st.players[0].explored[foe.y * st.size + foe.x] = true;
-      api.__GRIDFALL__.apply({ type: "attack", unitId: me.id, targetId: foe.id });
+      api.__GRIDFALL__.selectUnit(me.id);
     }
   });
   await page.waitForTimeout(200);

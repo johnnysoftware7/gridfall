@@ -49,27 +49,39 @@ function shade(x: number, y: number, a: string, b: string): string {
 export function drawFog(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const p = iso(x, y);
   ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.globalAlpha = 0.78;
-  ctx.fillStyle = "#7fd7ff";
-  hexBox(ctx, 0, -6, 34, 22);
-  ctx.fillStyle = "rgba(40, 220, 255, 0.18)";
-  for (let i = -12; i < 12; i += 3) {
-    ctx.fillRect(-28, i, 56, 1);
-  }
-  ctx.strokeStyle = "rgba(180, 255, 255, 0.45)";
-  ctx.stroke();
-  ctx.restore();
-}
-
-function hexBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  ctx.translate(p.x, p.y - 8);
+  // raised white holographic block (scanlines, slight cyan)
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = "#eef6ff";
   ctx.beginPath();
-  ctx.moveTo(x, y - h / 2);
-  ctx.lineTo(x + w / 2, y);
-  ctx.lineTo(x, y + h / 2);
-  ctx.lineTo(x - w / 2, y);
+  ctx.moveTo(0, -18);
+  ctx.lineTo(22, -6);
+  ctx.lineTo(0, 6);
+  ctx.lineTo(-22, -6);
   ctx.closePath();
   ctx.fill();
+  ctx.fillStyle = "#c5d4e4";
+  ctx.beginPath();
+  ctx.moveTo(-22, -6);
+  ctx.lineTo(0, 6);
+  ctx.lineTo(0, 16);
+  ctx.lineTo(-22, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#d8e4f0";
+  ctx.beginPath();
+  ctx.moveTo(22, -6);
+  ctx.lineTo(0, 6);
+  ctx.lineTo(0, 16);
+  ctx.lineTo(22, 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = "#7fd7ff";
+  for (let i = -14; i < 8; i += 3) {
+    ctx.fillRect(-18, i, 36, 1.2);
+  }
+  ctx.restore();
 }
 
 export function drawResource(ctx: CanvasRenderingContext2D, x: number, y: number, kind: string): void {
