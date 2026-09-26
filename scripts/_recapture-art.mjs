@@ -115,6 +115,8 @@ async function main() {
       const TILE_W = 88;
       const TILE_H = 44;
       api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 0.95);
+      const pick = g.units.find((u) => u.owner === 0 && u.type === "trooper") ?? g.units.find((u) => u.owner === 0);
+      if (pick) api.selectUnit(pick.id);
       api.paint();
     });
     await page.waitForTimeout(700);
@@ -164,18 +166,17 @@ async function main() {
           kind: f.text === "☠" ? "skull" : "text", text: f.text,
         });
       }
-      for (let i = 0; i < 88; i++) {
-        const a = (Math.PI * 2 * i) / 22 + (i % 4) * 0.2;
-        const r = 0.12 + (i % 8) * 0.11;
+      for (let i = 0; i < 14; i++) {
+        const a = 0.4 + (i / 14) * 0.87 - 0.43;
         api.fx.particles.push({
           gx: x, gy: y,
-          x: Math.cos(a) * r + ((i % 5) - 2) * 0.08,
-          y: 0.4 + (i % 6) * 0.14,
-          z: Math.sin(a) * r + ((i % 3) - 1) * 0.07,
+          x: Math.cos(a) * 0.12,
+          y: 0.55 + (i % 4) * 0.06,
+          z: Math.sin(a) * 0.12,
           vx: 0, vy: 0, vz: 0,
           life: 20000, max: 20000,
-          color: i % 3 === 0 ? "#ffe14a" : i % 3 === 1 ? "#ff6a3a" : "#ff8a2a",
-          size: 10, kind: "square",
+          color: i % 2 === 0 ? "#ffe14a" : "#ff6a3a",
+          size: 8, kind: "spark",
         });
       }
     });
