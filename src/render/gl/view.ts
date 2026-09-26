@@ -52,8 +52,8 @@ export function attachBoard(canvas: HTMLCanvasElement): Handle {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#02040a");
-  scene.fog = new THREE.FogExp2("#03050c", 0.014);
+  scene.background = new THREE.Color("#2a3038");
+  scene.fog = new THREE.FogExp2("#2a3038", 0.01);
   scene.environment = makeDarkEnv(renderer);
   scene.environmentIntensity = 0.75;
 
@@ -83,7 +83,7 @@ export function attachBoard(canvas: HTMLCanvasElement): Handle {
   const fxg = new THREE.Group();
   scene.add(tiles, props, actors, marks, fxg);
   stars(scene);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), metal("#05070c", 0.7, 0.4));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), lambert("#1c2026"));
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -0.02;
   floor.receiveShadow = true;
@@ -153,7 +153,7 @@ function aimCamera(h: Handle, cam: Camera, aspect: number, size: number): void {
   const g = isoToGrid(cam);
   look.set(g.x, 0, g.y);
   const dist = 11 / Math.max(0.7, cam.zoom);
-  h.camera.position.set(look.x + dist, dist * 1.12, look.z + dist);
+  h.camera.position.set(look.x + dist, dist * 1.05, look.z + dist);
   h.camera.lookAt(look);
   const vh = (size < 13 ? 7.2 : 8.4) / Math.max(0.7, cam.zoom);
   h.camera.left = -vh * aspect * 0.5;
@@ -212,33 +212,38 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     const lookT = terrainLook(t.terrain);
     const explored = p.explored[y * state.size + x];
     const cityHere = cityAt(state, x, y);
+    const check = (x + y) % 2 === 0;
     const mat = mesh.material as THREE.MeshLambertMaterial;
-    mat.color.set(explored ? lookT.side : "#2a3340");
-    mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a3040" : "#000");
+    const pale = explored && t.owner !== null;
+    mat.color.set(pale ? "#5a6068" : check ? "#343a42" : "#2a3038");
+    mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a2430" : "#000");
     mat.emissiveIntensity = explored && (t.terrain === "shelf" || t.terrain === "deep")
-      ? 0.12 + Math.sin(tnow * 0.003 + x + y) * 0.03
-      : lookT.emit;
-    const hgt = explored ? lookT.h : 0.68;
+      ? 0.08 + Math.sin(tnow * 0.003 + x + y) * 0.02
+      : 0;
+    const hgt = pale ? 0.78 : explored ? lookT.h : 0.7;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
     const capMat = cap.material as THREE.MeshLambertMaterial;
-    let capCol = mixHex(lookT.top, "#e4eaf4", 0.22);
-    if (t.owner !== null && explored) {
-      const fac = FACTIONS[state.players[t.owner].faction];
-      capCol = mixHex("#d4d8e2", fac.color, 0.16);
+    let capCol = check ? "#16181c" : "#1e2026";
+    if (explored && t.terrain === "deep") capCol = "#0a141c";
+    else if (explored && t.terrain === "shelf") capCol = "#102028";
+    else if (explored && t.terrain === "forest") capCol = "#142018";
+    else if (explored && t.terrain === "ridge") capCol = "#2a2620";
+    else if (pale) {
+      const fac = FACTIONS[state.players[t.owner!].faction];
+      capCol = mixHex("#e6e8ee", fac.color, 0.1);
     }
-    capMat.color.set(explored ? capCol : "#080a10");
+    capMat.color.set(capCol);
     capMat.emissive.set(cityHere && explored ? (cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff") : "#000");
-    capMat.emissiveIntensity = cityHere && explored ? 0.32 : 0;
+    capMat.emissiveIntensity = cityHere && explored ? 0.22 : 0;
     cap.position.y = 0.5;
-    cap.visible = explored;
+    cap.visible = true;
     const glint = mesh.children[1] as THREE.Mesh;
-    glint.visible = explored;
+    glint.visible = true;
     glint.position.y = 0.56;
     const fogBox = mesh.children[2] as THREE.Mesh;
-    fogBox.visible = !explored;
-    fogBox.position.y = 0.62;
+    fogBox.visible = false;
     mesh.visible = true;
   }
 }
@@ -293,8 +298,8 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital, city.level);
-      sp.scale.setScalar(city.isCapital ? 2.05 : 1.65);
-      sp.position.set(t.x - 0.32, lift, t.y - 0.32);
+      sp.scale.setScalar(city.isCapital ? 1.7 : 1.4);
+      sp.position.set(t.x - 0.2, lift, t.y - 0.2);
       h.props.add(sp);
       if (city.monument) {
         const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.03, 8, 22), glow("#f5d76e", 2.2));
@@ -351,9 +356,9 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
     const big = u.type === "titan" || u.type === "leviathan";
-    g.scale.setScalar(big ? 2.85 : 2.55);
+    g.scale.setScalar(big ? 2.6 : 2.25);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
-    const toward = onCity ? 0.34 : 0.05;
+    const toward = onCity ? 0.28 : 0.04;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
     g.rotation.y = Math.PI / 4;
     const idle = u.owner === view.pid && canAct(u);
@@ -455,7 +460,7 @@ export function drawWorldUi(
   for (const c of state.cities) {
     if (c.owner === null) continue;
     if (!state.players[pid].explored[c.y * state.size + c.x]) continue;
-    const p = projectTile(c.x - 0.32, c.y - 0.32, 2.05);
+    const p = projectTile(c.x - 0.2, c.y - 0.2, 1.7);
     if (!p) continue;
     ctx.font = "600 13px system-ui";
     ctx.lineWidth = 4;
@@ -470,7 +475,7 @@ export function drawWorldUi(
     if (!state.players[pid].explored[u.y * state.size + u.x]) continue;
     const hop = hopAt(u.id);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
-    const toward = onCity ? 0.34 : 0.05;
+    const toward = onCity ? 0.28 : 0.04;
     const p = projectTile((hop ? hop.x : u.x) + toward, (hop ? hop.y : u.y) + toward, 0.85);
     if (!p) continue;
     ctx.fillStyle = "#f4f4f4";

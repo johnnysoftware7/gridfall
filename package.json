@@ -1,7 +1,8 @@
 {
-  "name": "gridfall",
+  "name": "reboot",
   "private": true,
   "version": "1.0.0",
+  "description": "REBOOT — a year-3100 4X in the browser",
   "type": "module",
   "scripts": {
     "dev": "vite",

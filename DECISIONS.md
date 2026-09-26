@@ -18,7 +18,7 @@ Sources win. When the prompt and the 2026-09-26 wiki / screenshots / replays dis
 12. **Temple / Beacon costs:** field/ridge/shelf 20, bioforest 15 (`Spiritualism.wiki`).
 13. **Drift Crystal (starfish) harvest = +10⚡.** No dedicated Starfish wikitext (redirect stub). Treated as the ruin-style resource grant. Logged because the value is inferred.
 14. **Verdant Pact forest rate is 1.5×, 0 grain**, not the wiki’s raw `Bardur 0.8× forest`. Sequential modifiers plus observed Bardur maps (S6, replay) are forest-dense. 0.8× would make them *less* forested than base.
-15. **Map default is Continents-like** (~45–55% water), player-picked size. Wiki Perfection is always 16×16; the prompt lets the player choose 11/14/16/18 — player choice wins as a GRIDFALL setup option.
+15. **Map default is Continents-like** (~45–55% water), player-picked size. Wiki Perfection is always 16×16; the prompt lets the player choose 11/14/16/18 — player choice wins as a REBOOT setup option.
 16. **Polysseum spectator chrome** (turn timeline, Exit-as-X) is not single-player. HUD follows S3/S6/S7 (End Turn = checkmark).
 17. **Network task (Nexus Market):** awarded when at least two colonies are connected to the Command Spire by maglev / dock chain.
 18. **Ceasefire (peace):** implemented. Player may offer; AI accepts if its army+cities utility is clearly behind. Breaking freezes the breaker and disbands their units inside the other borders this turn.
@@ -40,5 +40,5 @@ Sources win. When the prompt and the 2026-09-26 wiki / screenshots / replays dis
 - Audio: Settings Music / SFX toggles drive an authored WebAudio SFX set (select, move, attack, harvest, research, victory, …) and a light original pad bed. No Polytopia samples.
 - Lighthouse / corner beacons: drawn as map-edge markers (S8) but are cosmetic.
 - Multiplayer “Waiting for…” bar: not used (single-player).
-- Special-tribe units (Amphibian, Mooni, Hexapod, …) are out of scope — GRIDFALL only ships the five regular-faction mirrors.
+- Special-tribe units (Amphibian, Mooni, Hexapod, …) are out of scope — REBOOT only ships the five regular-faction mirrors.
 - Temple level-up over calendar time is implemented as +1 temple level every 3 turns (wiki is “over time”; exact cadence is not on the pulled pages).

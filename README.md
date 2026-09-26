@@ -1,4 +1,4 @@
-# GRIDFALL
+# REBOOT
 
 A single-player 4X in the browser. The rules, numbers, pacing, and screen layout follow *The Battle of Polytopia*; the setting is year 3100 on a terraformed ocean world. The board and trailer heroes render in WebGL (Three.js); HUD chrome stays HTML/CSS. No Polytopia art, names, fonts, or audio ship in this build.
 

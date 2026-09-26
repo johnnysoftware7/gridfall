@@ -15,11 +15,11 @@ export function terrainLook(terrain: Terrain): {
   rough: number;
   emit: number;
 } {
-  if (terrain === "deep") return { top: "#0a3040", side: "#0a2834", h: 0.22, metal: 0.92, rough: 0.08, emit: 0.08 };
-  if (terrain === "shelf") return { top: "#1a6a80", side: "#145060", h: 0.34, metal: 0.82, rough: 0.12, emit: 0.14 };
-  if (terrain === "ridge") return { top: "#6a5e4c", side: "#4a4034", h: 0.96, metal: 0.38, rough: 0.38, emit: 0 };
-  if (terrain === "forest") return { top: "#2a6a38", side: "#1a4a26", h: 0.54, metal: 0.22, rough: 0.46, emit: 0.06 };
-  return { top: "#4a5564", side: "#5a6a7c", h: 0.72, metal: 0.55, rough: 0.26, emit: 0 };
+  if (terrain === "deep") return { top: "#0c1820", side: "#243038", h: 0.48, metal: 0.7, rough: 0.2, emit: 0.05 };
+  if (terrain === "shelf") return { top: "#102830", side: "#2a3a44", h: 0.56, metal: 0.65, rough: 0.22, emit: 0.08 };
+  if (terrain === "ridge") return { top: "#3a342c", side: "#4a443c", h: 0.92, metal: 0.4, rough: 0.4, emit: 0 };
+  if (terrain === "forest") return { top: "#1a2a1c", side: "#2a3a2e", h: 0.7, metal: 0.3, rough: 0.45, emit: 0.04 };
+  return { top: "#1a1c20", side: "#3a4048", h: 0.74, metal: 0.55, rough: 0.26, emit: 0 };
 }
 
 export function factionAccent(id: FactionId): string {

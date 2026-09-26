@@ -2,7 +2,7 @@ import * as THREE from "three";
 import type { FactionId, UnitType } from "../../engine/types";
 import { factionAccent, glow, ice, iceTint, lambert, metal } from "./palette";
 
-const RIM = new THREE.LineBasicMaterial({ color: "#eef6ff" });
+const RIM = new THREE.LineBasicMaterial({ color: "#e8f0f8" });
 
 function lit(color: string): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({ color });
@@ -29,7 +29,7 @@ function box(
 }
 
 function cap(r: number, len: number, mat: THREE.Material, x: number, y: number, z: number, rx = 0, rz = 0): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 8), mat);
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 7), mat);
   m.position.set(x, y, z);
   m.rotation.set(rx, 0, rz);
   m.castShadow = true;
@@ -38,7 +38,7 @@ function cap(r: number, len: number, mat: THREE.Material, x: number, y: number, 
 }
 
 function ball(r: number, mat: THREE.Material, x: number, y: number, z: number): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), mat);
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), mat);
   m.position.set(x, y, z);
   m.castShadow = true;
   return m;
@@ -53,17 +53,16 @@ function facet(r: number, mat: THREE.Material, x: number, y: number, z: number, 
   return m;
 }
 
-function rim(mesh: THREE.Mesh): void {
-  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 18), RIM));
-}
-
-function spike(mat: THREE.Material, x: number, y: number, z: number, h: number, s = 0.12, tilt = 0): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.OctahedronGeometry(s, 0), mat);
-  m.scale.set(0.62, h / (s * 2), 0.62);
+function octa(r: number, mat: THREE.Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.OctahedronGeometry(r, 0), mat);
+  m.scale.set(sx, sy, sz);
   m.position.set(x, y, z);
-  m.rotation.z = tilt;
   m.castShadow = true;
   return m;
+}
+
+function rim(mesh: THREE.Mesh): void {
+  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 22), RIM));
 }
 
 function crystal(mat: THREE.Material, x: number, y: number, z: number, h: number, s = 0.16, rx = 0, rz = 0): THREE.Mesh {
@@ -78,168 +77,29 @@ function crystal(mat: THREE.Material, x: number, y: number, z: number, h: number
 function mats(faction: FactionId, color: string) {
   const accent = factionAccent(faction);
   const tint = iceTint(faction);
-  const crystalBias = faction === "meridian" ? 0.18 : faction === "ashfall" ? 0.32 : 0.5;
   return {
     accent,
-    hull: lambert("#6a7380", "#1c2430", 0.1),
-    dark: lambert("#2e343c", "#0a0c10", 0.05),
-    plate: lambert(color, accent, 0.12),
+    hull: lambert("#4a5058", "#101418", 0.06),
+    dark: lambert("#22262c", "#050608", 0.04),
+    plate: lambert(color, accent, 0.1),
     visor: lit(accent),
-    ice: ice(tint, accent, crystalBias),
+    ice: ice(tint, accent, 0.4),
     core: lit(accent),
-    glow: glow(accent, 1.85),
     shard: lit(tint),
-    shardDim: lit(color),
+    glow: glow(accent, 1.7),
   };
 }
 
 type M = ReturnType<typeof mats>;
 
-export function buildMech(type: UnitType, faction: FactionId, color: string): THREE.Group {
-  const g = new THREE.Group();
-  const m = mats(faction, color);
-
-  if (type === "skiff" || type === "hoverScout" || type === "hullRam" || type === "depthBomber" || type === "leviathan" || type === "ghostSkiff") {
-    naval(g, type, m);
-    return g;
-  }
-
-  const stocky = type === "bulwark" || type === "vanguard" || type === "titan";
-  const lean = type === "skimmer" || type === "lancer" || type === "phantom" || type === "blade";
-  const hover = type === "skimmer";
-  const scale = type === "titan" ? 1.28 : type === "blade" ? 0.88 : stocky ? 1.1 : 1;
-  g.scale.setScalar(scale);
-
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.24, 20),
-    new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.55 }),
+function shadow(g: THREE.Group, r = 0.22): void {
+  const s = new THREE.Mesh(
+    new THREE.CircleGeometry(r, 16),
+    new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.5 }),
   );
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = 0.01;
-  g.add(shadow);
-
-  if (!hover) legs(g, m, stocky ? 0.15 : lean ? 0.11 : 0.13);
-  else hoverPad(g, m);
-
-  const stance = stocky ? 0.15 : lean ? 0.11 : 0.13;
-  const hip = facet(0.09, m.dark, 0, hover ? 0.16 : 0.22, 0.02, 1.35, 0.7, 1.05);
-  rim(hip);
-  g.add(hip);
-
-  const chest = facet(0.15, m.hull, 0, hover ? 0.32 : 0.4, 0.03, stocky ? 1.25 : lean ? 0.92 : 1.08, 1.15, 0.82);
-  chest.rotation.x = 0.18;
-  rim(chest);
-  g.add(chest);
-  const plate = facet(0.08, m.plate, 0, hover ? 0.33 : 0.41, 0.12, 1.15, 0.85, 0.45);
-  g.add(plate);
-  g.add(box(0.1, 0.04, 0.03, m.visor, 0, hover ? 0.34 : 0.42, 0.16));
-
-  for (const sx of [-1, 1] as const) {
-    const pad = facet(0.075, m.plate, sx * (stocky ? 0.17 : 0.14), hover ? 0.4 : 0.5, 0.0, 1.15, 0.7, 0.95);
-    pad.rotation.z = sx * -0.35;
-    rim(pad);
-    g.add(pad);
-    g.add(crystal(m.core, sx * (stocky ? 0.2 : 0.17), hover ? 0.46 : 0.56, -0.02, 0.16, 0.05, 0.2, sx * 0.4));
-    const upper = cap(0.036, 0.12, m.hull, sx * (stance + 0.08), hover ? 0.3 : 0.38, 0.04, 0.25, sx * 0.45);
-    const fore = cap(0.032, 0.11, m.dark, sx * (stance + 0.13), hover ? 0.2 : 0.26, 0.08, 0.35, sx * 0.2);
-    const fist = ball(0.038, m.hull, sx * (stance + 0.15), hover ? 0.14 : 0.18, 0.11);
-    rim(upper);
-    g.add(upper, fore, fist);
-  }
-
-  const helm = facet(0.09, m.hull, 0, hover ? 0.5 : 0.62, 0.04, 0.95, 0.88, 0.9);
-  rim(helm);
-  g.add(helm);
-  const visor = box(0.16, 0.07, 0.07, m.visor, 0, hover ? 0.49 : 0.61, 0.13);
-  g.add(visor);
-  g.add(box(0.11, 0.028, 0.03, lit("#f4ffff"), 0, hover ? 0.49 : 0.61, 0.17));
-  g.add(crest(faction, m, hover ? 0.54 : 0.66));
-
-  gear(g, type, m, hover);
-  if (type === "phantom" || type === "blade") fade(g, type === "phantom" ? 0.46 : 0.88);
-  return g;
-}
-
-function legs(g: THREE.Group, m: M, stance: number): void {
-  for (const sx of [-1, 1] as const) {
-    g.add(ball(0.04, m.dark, sx * stance, 0.22, 0.02));
-    const thigh = cap(0.042, 0.13, m.hull, sx * stance, 0.155, 0.04, 0.22, sx * 0.12);
-    const shin = cap(0.036, 0.12, m.dark, sx * (stance + 0.015), 0.07, 0.07, 0.12, 0);
-    const boot = facet(0.05, m.hull, sx * (stance + 0.015), 0.03, 0.1, 1.15, 0.45, 1.35);
-    rim(thigh);
-    rim(shin);
-    g.add(thigh, shin, boot);
-  }
-}
-
-function hoverPad(g: THREE.Group, m: M): void {
-  const pad = facet(0.16, m.hull, 0, 0.05, 0.02, 1.45, 0.28, 1.05);
-  rim(pad);
-  g.add(pad);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.018, 8, 20), m.visor);
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = 0.04;
-  g.add(ring);
-  g.add(box(0.08, 0.02, 0.08, m.visor, 0, 0.07, 0.08));
-}
-
-function gear(g: THREE.Group, type: UnitType, m: M, hover: boolean): void {
-  const hy = hover ? 0.28 : 0.34;
-  if (type === "trooper") {
-    g.add(cap(0.018, 0.22, m.dark, 0.16, hy, 0.16, 1.2, 0.15));
-    g.add(box(0.03, 0.03, 0.05, m.visor, 0.16, hy, 0.3));
-  }
-  if (type === "marksman" || type === "railgun") {
-    const L = type === "railgun" ? 0.48 : 0.34;
-    const gun = cap(0.022, L, m.dark, 0.17, hy, 0.12, 1.25, 0.1);
-    rim(gun);
-    g.add(gun);
-    g.add(box(0.035, 0.035, 0.08, m.visor, 0.17, hy, 0.12 + L * 0.42));
-    if (type === "railgun") g.add(facet(0.07, m.plate, 0.14, hy + 0.08, 0.02, 1.1, 0.7, 0.8));
-  }
-  if (type === "lancer") {
-    g.add(cap(0.016, 0.5, m.plate, 0.18, hy, 0.16, 1.05, 0.18));
-    g.add(crystal(m.core, 0.2, hy + 0.02, 0.42, 0.14, 0.045));
-  }
-  if (type === "bulwark") {
-    const shield = facet(0.12, m.ice, 0.2, hy, 0.08, 0.45, 1.15, 1.05);
-    rim(shield);
-    g.add(shield);
-    g.add(box(0.03, 0.1, 0.08, m.visor, 0.26, hy, 0.08));
-  }
-  if (type === "vanguard") {
-    g.add(spike(m.ice, 0, hover ? 0.58 : 0.7, -0.02, 0.2, 0.055, 0.15));
-    g.add(cap(0.016, 0.2, m.plate, 0.17, hy - 0.04, 0.14, 1.2, 0.1));
-  }
-  if (type === "netrunner") {
-    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 7, 0, Math.PI), m.visor);
-    dish.rotation.x = -0.75;
-    dish.position.set(0, hover ? 0.56 : 0.68, -0.02);
-    dish.castShadow = true;
-    g.add(dish);
-  }
-  if (type === "titan") {
-    g.add(facet(0.12, m.hull, 0, 0.72, 0.02, 1.2, 0.85, 0.9));
-    g.add(crystal(m.core, 0, 0.88, 0.04, 0.28, 0.1));
-    g.add(box(0.1, 0.06, 0.05, m.visor, 0, 0.86, 0.14));
-  }
-  if (type === "blade") {
-    g.add(box(0.018, 0.18, 0.04, m.plate, 0.18, hy, 0.1));
-    g.add(box(0.018, 0.18, 0.04, m.plate, -0.18, hy, 0.1));
-  }
-}
-
-function crest(faction: FactionId, m: M, y: number): THREE.Object3D {
-  if (faction === "meridian") return facet(0.045, m.plate, 0, y, 0.02, 1.2, 0.55, 0.9);
-  if (faction === "tide") return spike(m.ice, 0, y, -0.01, 0.14, 0.045, 0);
-  if (faction === "ashfall") {
-    const g = new THREE.Group();
-    g.add(spike(m.ice, -0.04, y, 0, 0.12, 0.04, -0.4));
-    g.add(spike(m.ice, 0.04, y, 0, 0.12, 0.04, 0.4));
-    return g;
-  }
-  if (faction === "verdant") return crystal(m.ice, 0, y, -0.01, 0.14, 0.05);
-  return spike(m.ice, 0, y + 0.02, -0.01, 0.16, 0.048, 0.18);
+  s.rotation.x = -Math.PI / 2;
+  s.position.y = 0.01;
+  g.add(s);
 }
 
 function fade(g: THREE.Group, opacity: number): void {
@@ -252,30 +112,173 @@ function fade(g: THREE.Group, opacity: number): void {
   });
 }
 
-function naval(g: THREE.Group, type: UnitType, m: M): void {
-  const L = type === "leviathan" ? 0.78 : type === "depthBomber" ? 0.58 : 0.5;
-  const hull = facet(0.16, m.hull, 0, 0.1, 0, L * 2.1, 0.42, 0.95);
+export function buildMech(type: UnitType, faction: FactionId, color: string): THREE.Group {
+  const g = new THREE.Group();
+  const m = mats(faction, color);
+  if (type === "skiff" || type === "hoverScout" || type === "hullRam" || type === "depthBomber" || type === "leviathan" || type === "ghostSkiff") {
+    naval(g, type, m);
+    return g;
+  }
+  shadow(g, type === "titan" ? 0.3 : 0.22);
+  if (type === "trooper") quadruped(g, m, 0.9);
+  else if (type === "skimmer") hoverDisc(g, m);
+  else if (type === "marksman") gunbed(g, m, 0.42);
+  else if (type === "railgun") gunbed(g, m, 0.62);
+  else if (type === "bulwark") squatTank(g, m);
+  else if (type === "vanguard") beetle(g, m);
+  else if (type === "lancer") wedge(g, m);
+  else if (type === "netrunner") spider(g, m);
+  else if (type === "titan") hulk(g, m);
+  else if (type === "phantom") wraith(g, m);
+  else if (type === "blade") scorpion(g, m);
+  else quadruped(g, m, 1);
+  return g;
+}
+
+function quadruped(g: THREE.Group, m: M, scale: number): void {
+  const body = facet(0.11 * scale, m.hull, 0, 0.16 * scale, 0.02, 1.55, 0.7, 1.15);
+  rim(body);
+  g.add(body);
+  g.add(facet(0.07 * scale, m.dark, 0, 0.18 * scale, 0.1, 1.1, 0.65, 0.8));
+  g.add(box(0.08 * scale, 0.03 * scale, 0.04 * scale, m.visor, 0, 0.19 * scale, 0.16 * scale));
+  for (const [sx, sz] of [[-1, 0.08], [1, 0.08], [-1, -0.08], [1, -0.08]] as const) {
+    const leg = cap(0.028 * scale, 0.1 * scale, m.dark, sx * 0.1 * scale, 0.08 * scale, sz * scale, 0.35, sx * 0.25);
+    g.add(leg);
+    g.add(ball(0.03 * scale, m.hull, sx * 0.12 * scale, 0.03, sz * scale + 0.04));
+  }
+  g.add(octa(0.04 * scale, m.core, 0, 0.24 * scale, -0.04, 0.8, 1.2, 0.7));
+}
+
+function hoverDisc(g: THREE.Group, m: M): void {
+  const pad = facet(0.16, m.hull, 0, 0.06, 0, 1.35, 0.28, 1.05);
+  rim(pad);
+  g.add(pad);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.016, 8, 18), m.visor);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.05;
+  g.add(ring);
+  g.add(facet(0.08, m.dark, 0, 0.14, 0.02, 1.1, 0.7, 0.9));
+  g.add(box(0.07, 0.025, 0.04, m.visor, 0, 0.15, 0.1));
+}
+
+function gunbed(g: THREE.Group, m: M, barrel: number): void {
+  const chassis = box(0.22, 0.08, 0.16, m.hull, 0, 0.1, 0);
+  rim(chassis);
+  g.add(chassis);
+  g.add(box(0.14, 0.06, 0.12, m.dark, 0, 0.16, -0.02));
+  const gun = cap(0.02, barrel, m.dark, 0.02, 0.16, 0.08 + barrel * 0.25, 1.2, 0);
+  rim(gun);
+  g.add(gun);
+  g.add(box(0.04, 0.03, 0.05, m.visor, 0.02, 0.16, 0.1 + barrel * 0.45));
+  for (const sx of [-1, 1] as const) {
+    g.add(box(0.06, 0.04, 0.1, m.hull, sx * 0.12, 0.05, 0.02));
+  }
+}
+
+function squatTank(g: THREE.Group, m: M): void {
+  const hull = facet(0.14, m.hull, 0, 0.14, 0, 1.35, 0.7, 1.15);
   rim(hull);
   g.add(hull);
-  g.add(facet(0.09, m.plate, 0, 0.18, 0, L * 1.4, 0.35, 0.7));
-  g.add(box(0.09, 0.05, 0.07, m.visor, L * 0.22, 0.2, 0.08));
-  g.add(box(0.06, 0.03, 0.1, m.core, -L * 0.22, 0.08, 0));
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.24, 16),
-    new THREE.MeshBasicMaterial({ color: "#000", transparent: true, opacity: 0.4 }),
-  );
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = 0.01;
-  g.add(shadow);
-  if (type === "hoverScout") {
-    g.add(cap(0.02, 0.16, m.plate, 0, 0.3, 0));
-    g.add(box(0.06, 0.03, 0.06, m.visor, 0, 0.4, 0));
+  const shield = box(0.05, 0.16, 0.2, m.plate, 0.14, 0.16, 0.04);
+  rim(shield);
+  g.add(shield);
+  g.add(box(0.03, 0.08, 0.1, m.visor, 0.18, 0.16, 0.04));
+  for (const sx of [-1, 1] as const) {
+    g.add(cap(0.03, 0.08, m.dark, sx * 0.12, 0.07, 0.06, 0.4, sx * 0.2));
+    g.add(cap(0.03, 0.08, m.dark, sx * 0.12, 0.07, -0.06, 0.4, sx * 0.2));
   }
-  if (type === "hullRam") g.add(facet(0.08, m.dark, L * 0.28, 0.1, 0, 1.2, 0.7, 0.8));
-  if (type === "depthBomber") g.add(facet(0.09, m.dark, -0.08, 0.24, 0, 1, 0.85, 1));
+}
+
+function beetle(g: THREE.Group, m: M): void {
+  const carapace = facet(0.13, m.hull, 0, 0.14, 0, 1.2, 0.75, 1.35);
+  carapace.rotation.x = 0.25;
+  rim(carapace);
+  g.add(carapace);
+  g.add(crystal(m.core, 0, 0.26, -0.04, 0.18, 0.05, 0.2, 0));
+  g.add(crystal(m.shard, 0.05, 0.24, -0.08, 0.14, 0.04, 0.15, 0.3));
+  g.add(box(0.07, 0.025, 0.04, m.visor, 0, 0.16, 0.14));
+  for (const [sx, sz] of [[-1, 0.08], [1, 0.08], [-1, -0.07], [1, -0.07]] as const) {
+    g.add(cap(0.025, 0.09, m.dark, sx * 0.1, 0.07, sz, 0.45, sx * 0.3));
+  }
+}
+
+function wedge(g: THREE.Group, m: M): void {
+  const body = octa(0.14, m.hull, 0, 0.12, 0.02, 0.7, 0.55, 1.6);
+  rim(body);
+  g.add(body);
+  g.add(cap(0.016, 0.42, m.plate, 0, 0.14, 0.22, 1.15, 0));
+  g.add(octa(0.04, m.core, 0, 0.14, 0.42, 0.7, 0.9, 0.7));
+  g.add(box(0.06, 0.02, 0.03, m.visor, 0, 0.16, 0.12));
+  for (const sx of [-1, 1] as const) {
+    g.add(cap(0.024, 0.08, m.dark, sx * 0.08, 0.06, -0.06, 0.3, sx * 0.2));
+  }
+}
+
+function spider(g: THREE.Group, m: M): void {
+  g.add(facet(0.09, m.dark, 0, 0.14, 0, 1.1, 0.7, 1.1));
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 6, 0, Math.PI), m.visor);
+  dish.rotation.x = -0.9;
+  dish.position.set(0, 0.22, -0.02);
+  g.add(dish);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    g.add(cap(0.016, 0.14, m.hull, Math.cos(a) * 0.12, 0.08, Math.sin(a) * 0.12, 0.7, Math.cos(a) * 0.4));
+  }
+}
+
+function hulk(g: THREE.Group, m: M): void {
+  const body = facet(0.18, m.hull, 0, 0.22, 0, 1.4, 0.85, 1.15);
+  rim(body);
+  g.add(body);
+  g.add(facet(0.1, m.dark, 0, 0.28, 0.1, 1.05, 0.7, 0.8));
+  g.add(crystal(m.core, 0, 0.4, 0, 0.22, 0.08));
+  g.add(box(0.1, 0.04, 0.05, m.visor, 0, 0.3, 0.18));
+  for (const [sx, sz] of [[-1, 0.1], [1, 0.1], [-1, -0.1], [1, -0.1]] as const) {
+    g.add(cap(0.04, 0.14, m.dark, sx * 0.14, 0.1, sz, 0.25, sx * 0.15));
+    g.add(ball(0.045, m.hull, sx * 0.16, 0.04, sz + 0.04));
+  }
+}
+
+function wraith(g: THREE.Group, m: M): void {
+  const body = facet(0.12, m.hull, 0, 0.16, 0, 1.1, 0.9, 1.4);
+  g.add(body);
+  g.add(box(0.08, 0.03, 0.04, m.visor, 0, 0.18, 0.14));
+  for (const sx of [-1, 1] as const) {
+    g.add(cap(0.02, 0.16, m.dark, sx * 0.1, 0.1, -0.08, 0.8, sx * 0.4));
+  }
+  fade(g, 0.45);
+}
+
+function scorpion(g: THREE.Group, m: M): void {
+  const body = facet(0.09, m.hull, 0, 0.12, 0, 1.3, 0.65, 1.5);
+  rim(body);
+  g.add(body);
+  g.add(box(0.06, 0.02, 0.03, m.visor, 0, 0.14, 0.14));
+  g.add(box(0.018, 0.14, 0.04, m.plate, 0.12, 0.16, 0.1, 0, 0, 0.5));
+  g.add(box(0.018, 0.14, 0.04, m.plate, -0.12, 0.16, 0.1, 0, 0, -0.5));
+  for (const sx of [-1, 1] as const) {
+    g.add(cap(0.02, 0.1, m.dark, sx * 0.08, 0.06, 0.06, 0.4, sx * 0.25));
+    g.add(cap(0.02, 0.1, m.dark, sx * 0.08, 0.06, -0.06, 0.4, sx * 0.25));
+  }
+}
+
+function naval(g: THREE.Group, type: UnitType, m: M): void {
+  const L = type === "leviathan" ? 0.78 : type === "depthBomber" ? 0.58 : 0.5;
+  const hull = facet(0.15, m.hull, 0, 0.09, 0, L * 2.2, 0.38, 0.95);
+  rim(hull);
+  g.add(hull);
+  g.add(facet(0.08, m.plate, 0, 0.16, 0, L * 1.3, 0.32, 0.7));
+  g.add(box(0.08, 0.04, 0.06, m.visor, L * 0.2, 0.18, 0.08));
+  shadow(g, 0.24);
+  if (type === "hoverScout") {
+    g.add(cap(0.018, 0.14, m.plate, 0, 0.28, 0));
+    g.add(box(0.05, 0.025, 0.05, m.visor, 0, 0.38, 0));
+  }
+  if (type === "hullRam") g.add(facet(0.07, m.dark, L * 0.28, 0.09, 0, 1.2, 0.65, 0.8));
+  if (type === "depthBomber") g.add(facet(0.08, m.dark, -0.08, 0.22, 0, 1, 0.8, 1));
   if (type === "leviathan") {
-    g.add(facet(0.12, m.ice, 0, 0.28, 0, 1.15, 0.8, 0.9));
-    g.add(crystal(m.core, 0, 0.44, 0, 0.24, 0.1));
+    g.add(facet(0.11, m.ice, 0, 0.26, 0, 1.1, 0.75, 0.85));
+    g.add(crystal(m.core, 0, 0.4, 0, 0.22, 0.09));
   }
   if (type === "ghostSkiff") fade(g, 0.5);
 }
@@ -289,7 +292,7 @@ export function buildHero(faction: FactionId, color: string): THREE.Group {
   for (const sx of [-1, 1] as const) {
     g.add(cap(0.2, 0.85, shell, sx * 0.32, 0.62, 0.04, 0.05, sx * 0.04));
     g.add(box(0.5, 0.18, 0.48, m.dark, sx * 0.32, 0.08, 0.08));
-    g.add(spike(shell, sx * 0.34, 1.28, 0.02, 0.32, 0.13, sx * 0.12));
+    g.add(crystal(shell, sx * 0.34, 1.28, 0.02, 0.32, 0.13, 0, sx * 0.12));
   }
 
   const torso = new THREE.Mesh(new THREE.IcosahedronGeometry(0.78, 0), shell);
@@ -310,9 +313,8 @@ export function buildHero(faction: FactionId, color: string): THREE.Group {
     pad.position.set(sx * 0.82, 2.58, 0.04);
     pad.castShadow = true;
     g.add(pad);
-    g.add(spike(shell, sx * 0.92, 3.05, -0.02, 0.7, 0.18, sx * -0.38));
-    g.add(spike(shell, sx * 1.1, 2.82, 0.12, 0.42, 0.13, sx * -0.6));
-    g.add(crystal(shell, sx * 0.68, 2.78, -0.2, 0.4, 0.14, 0.25, sx * 0.45));
+    g.add(crystal(shell, sx * 0.92, 3.05, -0.02, 0.7, 0.18, 0, sx * -0.38));
+    g.add(crystal(shell, sx * 1.1, 2.82, 0.12, 0.42, 0.13, 0, sx * -0.6));
   }
 
   const helm = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 0), shell);
@@ -321,12 +323,8 @@ export function buildHero(faction: FactionId, color: string): THREE.Group {
   helm.castShadow = true;
   g.add(helm);
   g.add(box(0.46, 0.08, 0.08, m.visor, 0, 3.04, 0.34));
-  g.add(spike(shell, 0.16, 3.62, -0.02, 0.82, 0.2, 0.2));
-  g.add(spike(shell, -0.2, 3.42, -0.1, 0.52, 0.15, -0.42));
-  g.add(crystal(shell, 0.38, 3.1, -0.08, 0.42, 0.13, 0.3, 0.55));
-  g.add(crystal(shell, -0.06, 2.15, -0.32, 0.62, 0.17, -0.35, 0));
-  g.add(crystal(shell, 0.2, 1.48, -0.26, 0.4, 0.13, 0.55, 0.15));
-
+  g.add(crystal(shell, 0.16, 3.62, -0.02, 0.82, 0.2, 0, 0.2));
+  g.add(crystal(shell, -0.2, 3.42, -0.1, 0.52, 0.15, 0, -0.42));
   return g;
 }
 
@@ -334,49 +332,42 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean, 
   const g = new THREE.Group();
   const m = mats(faction, color);
   const lv = Math.max(1, Math.min(8, level));
-  const plaza = metal("#c4c0b6", 0.5, 0.3);
-  const base = box(0.86, 0.08, 0.86, plaza, 0, 0.04, 0);
-  rim(base);
-  g.add(base);
-  g.add(box(0.58, 0.1, 0.58, m.dark, 0, 0.12, 0));
+  const floors = (capital ? 3 : 2) + Math.min(4, lv);
+  const w = capital ? 0.28 : 0.22;
 
-  const towerH = (capital ? 1.15 : 0.72) + lv * 0.16;
-  const shaft = crystal(m.shard, 0, 0.18 + towerH * 0.45, -0.1, towerH, 0.16);
-  rim(shaft);
-  g.add(shaft);
-  g.add(crystal(m.core, 0, 0.2 + towerH * 0.45, -0.1, towerH * 0.78, 0.08));
+  const plaza = box(0.82, 0.07, 0.82, lambert("#c8c4ba"), 0, 0.035, 0);
+  rim(plaza);
+  g.add(plaza);
+  g.add(box(0.52, 0.06, 0.52, m.dark, 0, 0.09, 0));
 
-  for (let i = 0; i < 4; i++) {
-    g.add(box(0.12, 0.035, 0.03, m.visor, 0, 0.28 + i * (towerH * 0.2), 0.02));
-  }
-
-  const n = capital ? 10 + Math.min(4, lv) : 6 + Math.min(3, lv);
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + 0.2;
-    const rad = 0.18 + (i % 4) * 0.07;
-    const h = (capital ? 0.95 : 0.58) + (i % 5) * 0.2 + lv * 0.07;
-    const mat = i % 3 === 0 ? m.core : i % 3 === 1 ? m.shard : m.shardDim;
-    g.add(crystal(mat, Math.cos(a) * rad, 0.2 + h * 0.42, -0.08 + Math.sin(a) * rad * 0.7, h, 0.13 + (i % 3) * 0.03, 0.2, a * 0.3));
-  }
-
-  if (capital) {
-    g.add(crystal(m.core, 0, 0.28 + towerH, -0.1, 0.42, 0.09));
-    for (const sx of [-1, 1] as const) {
-      g.add(crystal(m.shard, sx * 0.16, 0.22 + towerH * 0.85, -0.18, 0.38, 0.07, 0.15, sx * 0.35));
-    }
-  }
-
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.022, 8, 24), m.visor);
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.02, 8, 24), m.visor);
   halo.rotation.x = Math.PI / 2;
-  halo.position.set(0, 0.16, -0.04);
+  halo.position.set(0, 0.12, 0);
   g.add(halo);
-  const halo2 = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.012, 8, 20), m.core);
-  halo2.rotation.x = Math.PI / 2;
-  halo2.position.set(0, 0.22 + towerH * 0.55, -0.1);
-  g.add(halo2);
 
-  const light = new THREE.PointLight(m.accent, capital ? 1.35 : 0.8, capital ? 3.6 : 2.4, 2);
-  light.position.set(0, 0.7 + lv * 0.1, -0.08);
+  let y = 0.12;
+  for (let i = 0; i < floors; i++) {
+    const fw = w * (1 - i * 0.06);
+    const fh = capital ? 0.22 : 0.18;
+    const storey = box(fw, fh, fw, lambert("#2a323c", m.accent, 0.08), 0, y + fh / 2, -0.06);
+    rim(storey);
+    g.add(storey);
+    g.add(box(fw * 0.72, 0.035, 0.03, m.visor, 0, y + fh * 0.55, fw * 0.42 - 0.06));
+    g.add(box(fw * 0.72, 0.035, 0.03, m.visor, 0, y + fh * 0.55, -fw * 0.42 - 0.06));
+    y += fh + 0.012;
+  }
+
+  g.add(crystal(m.core, 0, y + 0.1, -0.06, 0.22, 0.07));
+  if (capital) {
+    g.add(crystal(m.shard, 0.1, y + 0.04, -0.12, 0.16, 0.05, 0.2, 0.3));
+    g.add(crystal(m.shard, -0.1, y + 0.04, -0.12, 0.16, 0.05, 0.2, -0.3));
+  }
+  for (const [x, z] of [[0.28, 0.2], [-0.26, 0.18]] as const) {
+    g.add(crystal(m.shard, x, 0.2, z, 0.2, 0.05));
+  }
+
+  const light = new THREE.PointLight(m.accent, capital ? 1.2 : 0.7, capital ? 3.4 : 2.2, 2);
+  light.position.set(0, y * 0.6, -0.04);
   g.add(light);
   return g;
 }

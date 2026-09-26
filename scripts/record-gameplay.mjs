@@ -1,5 +1,5 @@
 /**
- * Record a ~60–90s human-like GRIDFALL playthrough to MP4.
+ * Record a ~2–4 min human-like REBOOT playthrough to MP4.
  * Usage: node scripts/record-gameplay.mjs
  */
 import { spawn } from "node:child_process";
@@ -15,8 +15,9 @@ const PORT = 4173;
 const BASE = `http://127.0.0.1:${PORT}`;
 const VIEW = { width: 1280, height: 720 };
 const RAW_DIR = path.join(ROOT, "test-results", "gameplay-raw");
-const ARTIFACT = path.join(ROOT, "artifacts", "gridfall-gameplay.mp4");
-const SHOT_COPY = path.join(ROOT, "tests", "e2e", "shots", "gridfall-gameplay.mp4");
+const ARTIFACT = path.join(ROOT, "artifacts", "reboot-gameplay.mp4");
+const SHOT_COPY = path.join(ROOT, "tests", "e2e", "shots", "reboot-gameplay.mp4");
+const LEGACY = path.join(ROOT, "artifacts", "gridfall-gameplay.mp4");
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -468,6 +469,7 @@ async function main() {
     if (!raw) throw new Error("Playwright did not produce a video file");
     const bytes = await transcode(raw, ARTIFACT);
     await copyFile(ARTIFACT, SHOT_COPY);
+    await copyFile(ARTIFACT, LEGACY);
     const meta = await probe(ARTIFACT);
     const stream = meta?.streams?.[0] ?? {};
     const duration = Number(meta?.format?.duration ?? stream.duration ?? 0);

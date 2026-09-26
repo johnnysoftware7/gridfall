@@ -1,4 +1,4 @@
-/** Authored WebAudio bed — original GRIDFALL palette, no samples. */
+/** Authored WebAudio bed — original REBOOT palette, no samples. */
 
 let ctx: AudioContext | null = null;
 let sfxOn = true;

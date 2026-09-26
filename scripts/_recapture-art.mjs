@@ -82,7 +82,7 @@ async function main() {
       const c = g.cities.find((x) => x.owner === 0 && x.isCapital) ?? g.cities[0];
       const TILE_W = 88;
       const TILE_H = 44;
-      api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 1.35);
+      api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 0.95);
     });
     await page.waitForTimeout(700);
     await shot(page, "02-early-board.png");
@@ -93,7 +93,7 @@ async function main() {
       const c = g.cities.find((x) => x.owner === 0 && x.isCapital) ?? g.cities[0];
       const TILE_W = 88;
       const TILE_H = 44;
-      api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 2.05);
+      api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 1.7);
     });
     await page.waitForTimeout(700);
     await shot(page, "03-city-closeup.png");
@@ -105,16 +105,27 @@ async function main() {
       const x = me?.x ?? 0;
       const y = me?.y ?? 0;
       api.fx.particles.length = 0;
-      api.fx.particles.push(
-        { gx: x, gy: y, x: 0.22, y: 1.65, z: 0, vx: 0, vy: 0, vz: 0, life: 20000, max: 20000, color: "#ff5a3a", size: 40, kind: "text", text: "-6" },
-        { gx: x, gy: y, x: -0.22, y: 1.25, z: 0.1, vx: 0, vy: 0, vz: 0, life: 20000, max: 20000, color: "#ff4d3a", size: 40, kind: "skull", text: "☠" },
-      );
-      for (let i = 0; i < 22; i++) {
-        const a = (Math.PI * 2 * i) / 22;
+      const floats = [
+        { x: 0.15, y: 1.7, z: 0.05, text: "-6", color: "#ff4d3a" },
+        { x: -0.35, y: 1.35, z: 0.2, text: "-3", color: "#ff6a3a" },
+        { x: 0.45, y: 1.15, z: -0.15, text: "-8", color: "#ff5a3a" },
+        { x: -0.1, y: 1.05, z: 0.25, text: "☠", color: "#ff4d3a" },
+        { x: 0.55, y: 0.95, z: 0.3, text: "-2", color: "#e88a60" },
+      ];
+      for (const f of floats) {
         api.fx.particles.push({
-          gx: x, gy: y, x: Math.cos(a) * 0.12, y: 0.7, z: Math.sin(a) * 0.12,
-          vx: Math.cos(a) * 0.08, vy: 0.04, vz: Math.sin(a) * 0.08,
-          life: 20000, max: 20000, color: i % 3 === 0 ? "#ffe14a" : "#ff6a3a", size: 6, kind: "square",
+          gx: x, gy: y, x: f.x, y: f.y, z: f.z, vx: 0, vy: 0, vz: 0,
+          life: 20000, max: 20000, color: f.color, size: 40,
+          kind: f.text === "☠" ? "skull" : "text", text: f.text,
+        });
+      }
+      for (let i = 0; i < 40; i++) {
+        const a = (Math.PI * 2 * i) / 40;
+        const r = 0.15 + (i % 5) * 0.08;
+        api.fx.particles.push({
+          gx: x, gy: y, x: Math.cos(a) * r, y: 0.55 + (i % 4) * 0.12, z: Math.sin(a) * r,
+          vx: Math.cos(a) * 0.05, vy: 0.02, vz: Math.sin(a) * 0.05,
+          life: 20000, max: 20000, color: i % 3 === 0 ? "#ffe14a" : "#ff6a3a", size: 7, kind: "square",
         });
       }
     });

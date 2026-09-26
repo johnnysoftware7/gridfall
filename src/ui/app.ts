@@ -114,7 +114,7 @@ function renderFaction(): void {
     <div class="faction-screen trailer" data-screen="faction">
       <canvas class="hero-bg" id="hero"></canvas>
       <div class="trailer-copy">
-        <h1>GRIDFALL</h1>
+        <h1>REBOOT</h1>
         <p>AN ORIGINAL YEAR-3100 4X</p>
       </div>
       <div class="medals"></div>
@@ -224,14 +224,14 @@ function startGame(): void {
   setMusic(ui.music);
   save();
   render();
-  showBanner("GRIDFALL", FACTIONS[ui.faction].name, 1200);
+  showBanner("REBOOT", FACTIONS[ui.faction].name, 1200);
 }
 
 function renderGameShell(): void {
   appEl.innerHTML = `
     <canvas id="board"></canvas>
     <canvas id="board-ui" class="board-ui"></canvas>
-    <div class="title-mark">GRIDFALL</div>
+    <div class="title-mark">REBOOT</div>
     <div class="hud-top" id="hud"></div>
     <div class="hud-br" id="br"></div>
     <div id="sel"></div>

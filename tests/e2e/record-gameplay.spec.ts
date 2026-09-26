@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Human-like GRIDFALL playthrough with Playwright recordVideo.
+ * Human-like REBOOT playthrough with Playwright recordVideo.
  * Run: RECORD_GAMEPLAY=1 npx playwright test tests/e2e/record-gameplay.spec.ts
  * Prefer `node scripts/record-gameplay.mjs` to also transcode to artifacts/gridfall-gameplay.mp4.
  */

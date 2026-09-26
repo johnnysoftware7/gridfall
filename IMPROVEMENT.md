@@ -1,4 +1,4 @@
-# GRIDFALL improvement log
+# REBOOT improvement log
 
 Polytopia-reference impression used as the bar (not a pixel copy):
 - Graphics ~7.5 — readable chunky tiles, iconic fog, units that pop

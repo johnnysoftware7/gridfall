@@ -27,7 +27,7 @@ export function drawBoard(
 
 export function focusCapital(state: GameState, pid: PlayerId): Camera {
   const c = state.cities.find((x) => x.owner === pid && x.isCapital) ?? state.cities.find((x) => x.owner === pid);
-  if (!c) return { x: 0, y: 0, zoom: 1.55 };
+  if (!c) return { x: 0, y: 0, zoom: 1.15 };
   const p = iso(c.x, c.y);
-  return { x: p.x, y: p.y, zoom: 1.6 };
+  return { x: p.x, y: p.y, zoom: 1.15 };
 }
