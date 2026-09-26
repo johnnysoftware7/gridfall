@@ -234,3 +234,25 @@ Product name is REBOOT. Art pass aimed at the 8.3 leftovers vs Futuretopia `3_ma
 **Remaining vs the bar (why this is not 9.0):** Futuretopia close-ups are dark articulated metal creatures (quadruped, wreckage, crystal walker) on a high-contrast black/white checker with a thick orange number field. Our Trooper is still a small dark hull with stub legs — readable as a walker, not as the `4b`/`5` menagerie. The Command Spire is a single teal tower, not a night-rim cluster of level-readable volumes. Unowned cubes are one dark value, so the board never quite becomes that developed-match checker. Combat numbers stack, but the orange particles read as a pale glow rather than the square burst in `4_combat_juice`.
 
 ---
+
+## Cycle 11 — 2026-09-26 (four leftovers)
+
+Close the gaps named in Cycle 10. Brand stays REBOOT. Engine / rules / HUD unchanged. `__GRIDFALL__` kept.
+
+**Play notes (art-pass 01–05 vs `3_match_developed` / `4b_combat_closeup` / `5_city_closeup` / `4_combat_juice`):**
+- Board is a high-contrast black/white 3D checker. Unowned odd tiles are white; even tiles are black. Player-owned keeps the checker; enemy tiles tint. This is the same sport as `3_match_developed`.
+- Novagrid is a cluster of offset glass shafts with teal per-floor window bands (tall main + shorter annexes), not a single teal stick. Floors read. The shafts still sit paler than Futuretopia's night-rim glass — white owned plates + SwiftShader wash the dark glass down.
+- Units are class-distinct at play zoom: hover disc, hex gunbed, squat pad, spider with splayed legs, wedge/lance. Always-lit mid-dark hulls, visor slits, box hip/knee/boot legs. They are not the articulated metal animals in `4b`/`5` — joints flatten to vehicle silhouettes at board scale.
+- Combat freeze-frame is a thick orange/gold square field plus stacked −6/−3/−8/−2/☠. Not a pale glow.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.9 | Honest vs the attached Futuretopia stills. Checker and combat juice clear the named leftover. Spire is a readable cluster. Units are a menagerie of silhouettes, not one walker — but they still lose a close-up side-by-side with `4b`/`5`. 9.0 would be a lie. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. |
+| Fun | 8.7 | Orange square storm + stacked floats. Mid-game loop unchanged. |
+
+**Shipped:** box-jointed class builders (quadruped / disc / gunbed / tank / beetle / lance / spider / hulk / wraith / scorpion); multi-volume Command Spire with per-floor visor bands; MeshBasic black (`#080a0e`) / white (`#f2f4f8`) cubes; MeshBasic 0.34 orange/gold combat cubes (burst 48–56). `artifacts/reboot-gameplay.mp4` refreshed after this pass.
+
+**Why this is not 9.0:** The remaining hole is the unit close-up. Futuretopia `4b`/`5` are dark articulated metal creatures with limbs that read as animals. Ours read as dark geometric vehicles — distinct classes, visible visors, some splayed legs — but SwiftShader + board-scale ortho still crush hip/knee/shin into a pad. Widening the models further merged neighbors into one grey blob (tried, reverted). Night-rim glass on the spire is real in the mesh and in pixel samples, but the freeze-frame still photographs as pale modernist towers on white plates.
+
+---

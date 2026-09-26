@@ -220,14 +220,14 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     const owned = explored && t.owner !== null;
     const mine = owned && t.owner === pid;
     const fac = owned ? FACTIONS[state.players[t.owner!].faction] : null;
-    let side = check ? "#14181e" : "#c8ccd6";
-    let capCol = check ? "#0a0c10" : "#e8eaf2";
+    let side = check ? "#2a3038" : "#9aa2ae";
+    let capCol = check ? "#080a0e" : "#f2f4f8";
     if (mine) {
-      side = check ? "#1a1e24" : "#e4e8f0";
-      capCol = check ? "#12151a" : "#f7f8fc";
+      side = check ? "#323840" : "#c8ced8";
+      capCol = check ? "#101418" : "#fbfcfe";
     } else if (owned && fac) {
-      side = check ? mixHex("#16141c", fac.color, 0.16) : mixHex("#d0c8d4", fac.color, 0.14);
-      capCol = check ? mixHex("#100e14", fac.color, 0.14) : mixHex("#eee8f0", fac.color, 0.12);
+      side = check ? mixHex("#2a2830", fac.color, 0.16) : mixHex("#a8a0b0", fac.color, 0.14);
+      capCol = check ? mixHex("#0c0a10", fac.color, 0.12) : mixHex("#f0eaf4", fac.color, 0.1);
     }
     if (explored && (t.terrain === "shelf" || t.terrain === "deep") && !owned) {
       side = check ? "#0c1820" : "#8aa0b0";
@@ -237,7 +237,7 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
       capCol = mixHex(capCol, cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff", 0.18);
     }
     mat.color.set(side);
-    const hgt = owned ? 0.95 : explored ? Math.max(0.82, lookT.h) : 0.88;
+    const hgt = owned ? 1.08 : explored ? Math.max(0.92, lookT.h) : 1.0;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
@@ -304,8 +304,8 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
       const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital, city.level);
-      sp.scale.setScalar(city.isCapital ? 2.05 : 1.7);
-      sp.position.set(t.x - 0.2, lift, t.y - 0.2);
+      sp.scale.setScalar(city.isCapital ? 2.1 : 1.7);
+      sp.position.set(t.x - 0.18, lift, t.y - 0.18);
       h.props.add(sp);
       if (city.monument) {
         const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.03, 8, 22), glow("#f5d76e", 2.2));
@@ -362,9 +362,9 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
     const big = u.type === "titan" || u.type === "leviathan";
-    g.scale.setScalar(big ? 3.45 : 3.15);
+    g.scale.setScalar(big ? 2.7 : 2.35);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
-    const toward = onCity ? 0.28 : 0.04;
+    const toward = onCity ? 0.52 : 0.06;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
     g.rotation.y = Math.PI / 4;
     const idle = u.owner === view.pid && canAct(u);
@@ -484,7 +484,7 @@ export function drawWorldUi(
     if (!state.players[pid].explored[u.y * state.size + u.x]) continue;
     const hop = hopAt(u.id);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
-    const toward = onCity ? 0.28 : 0.04;
+    const toward = onCity ? 0.52 : 0.06;
     const p = projectTile((hop ? hop.x : u.x) + toward, (hop ? hop.y : u.y) + toward, 0.85);
     if (!p) continue;
     ctx.fillStyle = "#f4f4f4";

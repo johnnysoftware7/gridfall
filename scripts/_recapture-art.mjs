@@ -80,9 +80,42 @@ async function main() {
       const api = /** @type {any} */ (window).__GRIDFALL__;
       const g = api.state();
       const c = g.cities.find((x) => x.owner === 0 && x.isCapital) ?? g.cities[0];
+      const types = ["trooper", "skimmer", "bulwark", "netrunner", "blade", "lancer"];
+      const spots = [
+        [2, 0], [0, 2], [2, 2], [-2, 1], [1, -2], [3, 1],
+      ];
+      let n = 0;
+      for (const [dx, dy] of spots) {
+        const x = c.x + dx;
+        const y = c.y + dy;
+        if (x < 0 || y < 0 || x >= g.size || y >= g.size) continue;
+        const occ = g.units.some((u) => u.x === x && u.y === y);
+        const city = g.cities.some((ci) => ci.x === x && ci.y === y);
+        if (occ || city) continue;
+        const type = types[n % types.length];
+        g.units.push({
+          id: `art-${n}`,
+          type,
+          owner: n % 5 === 0 ? 1 : 0,
+          x, y,
+          hp: 10, maxHp: 10,
+          moved: false, attacked: false, acted: false,
+          kills: 0, veteran: false, veteranReady: false,
+          cityId: null, startX: x, startY: y,
+        });
+        n += 1;
+      }
+      for (const t of g.tiles) {
+        const dx = Math.abs(t.x - c.x);
+        const dy = Math.abs(t.y - c.y);
+        if (dx + dy <= 4) {
+          for (const p of g.players) p.explored[t.y * g.size + t.x] = true;
+        }
+      }
       const TILE_W = 88;
       const TILE_H = 44;
       api.aim((c.x - c.y) * (TILE_W / 2), (c.x + c.y) * (TILE_H / 2), 0.95);
+      api.paint();
     });
     await page.waitForTimeout(700);
     await shot(page, "02-early-board.png");
@@ -101,7 +134,8 @@ async function main() {
     await page.evaluate(() => {
       const api = /** @type {any} */ (window).__GRIDFALL__;
       const g = api.state();
-      const me = g.units.find((u) => u.owner === 0);
+      const me = g.units.find((u) => u.owner === 0 && !g.cities.some((ci) => ci.x === u.x && ci.y === u.y))
+        ?? g.units.find((u) => u.owner === 0);
       const x = me?.x ?? 0;
       const y = me?.y ?? 0;
       api.fx.particles.length = 0;

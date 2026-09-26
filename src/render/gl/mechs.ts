@@ -79,15 +79,15 @@ function mats(faction: FactionId, color: string) {
   const tint = iceTint(faction);
   return {
     accent,
-    hull: lit("#8a929c"),
-    dark: lit("#3e444c"),
+    hull: lit("#4a525a"),
+    dark: lit("#1c2228"),
     plate: lit(color),
     visor: lit(accent),
     ice: ice(tint, accent, 0.4),
     core: lit(accent),
     shard: lit(tint),
     glow: glow(accent, 1.7),
-    rim: lit("#e8eef6"),
+    rim: lit("#f2f6fc"),
   };
 }
 
@@ -139,29 +139,31 @@ export function buildMech(type: UnitType, faction: FactionId, color: string): TH
 }
 
 function leg(g: THREE.Group, m: M, x: number, z: number, s: number, flare: number): void {
-  g.add(ball(0.032 * s, m.hull, x, 0.14 * s, z));
-  const thigh = cap(0.028 * s, 0.1 * s, m.dark, x + flare * 0.04, 0.09 * s, z, 0.45, flare * 0.35);
+  g.add(box(0.07 * s, 0.07 * s, 0.07 * s, m.hull, x, 0.2 * s, z));
+  const thigh = box(0.055 * s, 0.14 * s, 0.055 * s, m.dark, x + flare * 0.06, 0.13 * s, z, 0, 0, flare * 0.35);
   rim(thigh);
   g.add(thigh);
-  g.add(ball(0.026 * s, m.hull, x + flare * 0.07, 0.055 * s, z + 0.02));
-  g.add(cap(0.024 * s, 0.08 * s, m.dark, x + flare * 0.08, 0.035 * s, z + 0.04, 0.2, 0));
-  g.add(box(0.055 * s, 0.022 * s, 0.07 * s, m.hull, x + flare * 0.08, 0.018, z + 0.06));
+  g.add(box(0.06 * s, 0.06 * s, 0.06 * s, m.rim, x + flare * 0.11, 0.07 * s, z + 0.02));
+  const shin = box(0.05 * s, 0.11 * s, 0.05 * s, m.dark, x + flare * 0.13, 0.04 * s, z + 0.05);
+  rim(shin);
+  g.add(shin);
+  g.add(box(0.09 * s, 0.03 * s, 0.11 * s, m.hull, x + flare * 0.13, 0.016, z + 0.08));
 }
 
 function quadruped(g: THREE.Group, m: M, scale: number): void {
   const s = scale;
-  const body = facet(0.13 * s, m.hull, 0, 0.18 * s, 0.02, 1.7, 0.75, 1.25);
+  const body = facet(0.16 * s, m.hull, 0, 0.22 * s, 0.02, 1.75, 0.8, 1.3);
   rim(body);
   g.add(body);
-  const head = facet(0.07 * s, m.dark, 0, 0.22 * s, 0.14 * s, 1.05, 0.75, 0.95);
+  const head = facet(0.085 * s, m.dark, 0, 0.26 * s, 0.18 * s, 1.1, 0.8, 1);
   rim(head);
   g.add(head);
-  g.add(box(0.1 * s, 0.04 * s, 0.05 * s, m.visor, 0, 0.22 * s, 0.2 * s));
-  g.add(box(0.06 * s, 0.016 * s, 0.02 * s, m.rim, 0, 0.22 * s, 0.23 * s));
-  for (const [sx, sz] of [[-1, 0.1], [1, 0.1], [-1, -0.09], [1, -0.09]] as const) {
-    leg(g, m, sx * 0.12 * s, sz * s, s, sx);
+  g.add(box(0.12 * s, 0.05 * s, 0.06 * s, m.visor, 0, 0.26 * s, 0.26 * s));
+  g.add(box(0.07 * s, 0.018 * s, 0.022 * s, m.rim, 0, 0.26 * s, 0.3 * s));
+  for (const [sx, sz] of [[-1, 0.12], [1, 0.12], [-1, -0.1], [1, -0.1]] as const) {
+    leg(g, m, sx * 0.15 * s, sz * s, s, sx);
   }
-  g.add(octa(0.045 * s, m.core, 0, 0.28 * s, -0.06, 0.8, 1.3, 0.7));
+  g.add(octa(0.055 * s, m.core, 0, 0.34 * s, -0.06, 0.8, 1.3, 0.7));
 }
 
 function arm(g: THREE.Group, m: M, x: number, y: number, z: number, s: number, flare: number, reach = 1): void {
@@ -403,21 +405,21 @@ function glassTower(
   w: number,
   fh: number,
 ): number {
-  const glass = lit("#1c2832");
-  const pane = lit("#2a3844");
+  const glass = lit("#243038");
+  const pane = lit("#33424c");
   let y = 0.14;
   for (let i = 0; i < floors; i++) {
     const tw = w * (1 - i * 0.035);
     const storey = box(tw, fh, tw, i % 2 === 0 ? glass : pane, x, y + fh / 2, z);
     rim(storey);
     g.add(storey);
-    const band = 0.055;
-    const wy = y + fh * 0.58;
-    g.add(box(tw * 0.72, band, 0.018, m.visor, x, wy, z + tw * 0.5));
-    g.add(box(tw * 0.72, band, 0.018, m.visor, x, wy, z - tw * 0.5));
-    g.add(box(0.018, band, tw * 0.72, m.visor, x + tw * 0.5, wy, z));
-    g.add(box(0.018, band, tw * 0.72, m.visor, x - tw * 0.5, wy, z));
-    g.add(box(tw * 0.82, 0.012, tw * 0.82, m.rim, x, y + fh - 0.006, z));
+    const band = fh * 0.42;
+    const wy = y + fh * 0.55;
+    g.add(box(tw * 0.82, band, 0.03, m.visor, x, wy, z + tw * 0.5));
+    g.add(box(tw * 0.82, band, 0.03, m.visor, x, wy, z - tw * 0.5));
+    g.add(box(0.03, band, tw * 0.82, m.visor, x + tw * 0.5, wy, z));
+    g.add(box(0.03, band, tw * 0.82, m.visor, x - tw * 0.5, wy, z));
+    g.add(box(tw * 0.88, 0.016, tw * 0.88, m.dark, x, y + fh - 0.008, z));
     y += fh + 0.014;
   }
   g.add(octa(w * 0.22, m.core, x, y + 0.04, z, 0.7, 1.2, 0.7));
@@ -429,10 +431,10 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean, 
   const m = mats(faction, color);
   const lv = Math.max(1, Math.min(8, level));
 
-  const plaza = box(0.95, 0.06, 0.95, lit("#c8c4ba"), 0, 0.03, 0);
+  const plaza = box(0.58, 0.05, 0.58, lit("#3a424c"), 0, 0.025, 0);
   rim(plaza);
   g.add(plaza);
-  g.add(box(0.62, 0.05, 0.62, m.dark, 0, 0.08, 0));
+  g.add(box(0.4, 0.04, 0.4, m.dark, 0, 0.06, 0));
 
   const halo = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.018, 8, 24), m.visor);
   halo.rotation.x = Math.PI / 2;
@@ -444,12 +446,12 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean, 
   const lowFloors = Math.max(2, mainFloors - 3);
   const fh = capital ? 0.2 : 0.175;
 
-  const mainH = glassTower(g, m, 0.02, -0.04, mainFloors, capital ? 0.26 : 0.2, fh);
-  glassTower(g, m, 0.28, -0.22, midFloors, capital ? 0.16 : 0.13, fh * 0.9);
-  glassTower(g, m, -0.24, 0.2, lowFloors, capital ? 0.15 : 0.12, fh * 0.88);
+  const mainH = glassTower(g, m, 0.04, -0.02, mainFloors, capital ? 0.3 : 0.22, fh);
+  glassTower(g, m, 0.36, -0.28, midFloors, capital ? 0.15 : 0.12, fh * 0.9);
+  glassTower(g, m, -0.32, 0.26, lowFloors, capital ? 0.14 : 0.11, fh * 0.88);
   if (capital) {
-    glassTower(g, m, 0.26, 0.22, Math.max(2, lowFloors - 1), 0.12, fh * 0.82);
-    glassTower(g, m, -0.22, -0.2, 2, 0.11, fh * 0.8);
+    glassTower(g, m, 0.34, 0.3, Math.max(2, lowFloors - 1), 0.11, fh * 0.82);
+    glassTower(g, m, -0.3, -0.26, 2, 0.1, fh * 0.8);
   }
 
   g.add(crystal(m.core, 0.02, mainH + 0.12, -0.04, 0.2, 0.06));
