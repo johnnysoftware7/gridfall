@@ -9,11 +9,11 @@ import { dispatch, legalTileActions } from "../engine/actions";
 import { previewUnits } from "../engine/combat";
 import { canAct, legalAttacks, legalMoves } from "../engine/movement";
 import { cityAt, cityCount, cityIncome, current, playerIncome, tileAt, unitAt } from "../engine/queries";
-import { computeScore, finalScore } from "../engine/score";
+import { computeScore, finalScore, scoreBreakdown } from "../engine/score";
 import type { Command, Difficulty, FactionId, GameMode, GameState, LevelUpReward, PlayerId, TechId, Unit } from "../engine/types";
 import { drawHelmetMedallion } from "../render/art/helmets";
 import { drawBoard, drawStarfield, focusCapital } from "../render/board";
-import { burst, floatText, fx, punch, tickFx } from "../render/fx";
+import { burst, floatText, fx, punch, startHop, tickFx } from "../render/fx";
 import { iso, pickTile, type Camera } from "../render/iso";
 
 export interface UiState {
@@ -242,6 +242,7 @@ function renderGameShell(): void {
     <div class="hud-br" id="br"></div>
     <div id="sel"></div>
     <div class="toast-stack" id="toasts"></div>
+    <div class="helper" id="helper"></div>
     <div class="coach" id="coach" hidden></div>
     <div class="turn-banner" id="tbanner"></div>
     <div id="overlay"></div>
@@ -293,7 +294,11 @@ function bindCanvas(): void {
   c.addEventListener("touchmove", (e) => {
     if (e.touches.length === 2) {
       const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      if (pinch) ui.cam.zoom = Math.min(2.2, Math.max(0.45, ui.cam.zoom * (d / pinch)));
+      if (pinch) {
+        const z = Math.min(2.85, Math.max(0.7, ui.cam.zoom * (d / pinch)));
+        ui.cam.zoom = z;
+        camGoal.zoom = z;
+      }
       pinch = d;
       paint();
     }
@@ -346,6 +351,12 @@ function apply(cmd: Command): void {
     const u = ui.game.units.find((unit) => unit.owner === 0);
     if (u) floatText(u.x, u.y, `+${scoreAfter - scoreBefore}`, "#ffe14a");
   }
+  for (const c of ui.game.cities) {
+    const prev = before.cities.find((x) => x.id === c.id);
+    if (prev && c.owner === 0 && c.progress > prev.progress) {
+      floatText(c.x, c.y, `+XP`, "#7ecbff");
+    }
+  }
   if (cmd.type === "move" || cmd.type === "harvest" || cmd.type === "train") ui.coached = true;
   if (ui.game.pendingLevelUp && ui.game.currentPlayer === 0) {
     paint();
@@ -385,8 +396,10 @@ function flashExplored(before: boolean[], after: GameState): void {
 
 function juice(cmd: Command, g: GameState): void {
   if (cmd.type === "move") {
+    const mover = g.units.find((u) => u.id === cmd.unitId);
     playSfx("move");
-    burst(cmd.x, cmd.y, "#7ffff6", 8);
+    if (mover) startHop(mover.id, mover.x, mover.y, cmd.x, cmd.y, 260);
+    burst(cmd.x, cmd.y, "#3d9fff", 8);
     ui.coached = true;
     const dest = iso(cmd.x, cmd.y);
     camGoal.x = dest.x;
@@ -399,14 +412,16 @@ function juice(cmd: Command, g: GameState): void {
       if (a) {
         const pv = previewUnits(g, a, t);
         floatText(t.x, t.y, `-${pv.attackResult}`, "#ff6b6b");
+        const city = cityAt(g, a.x, a.y);
+        if (city && city.owner === 0) floatText(city.x, city.y, "+XP", "#7ecbff");
       }
       burst(t.x, t.y, "#ff4d4d", 14);
     }
-    punch(7);
+    punch(5);
   } else if (cmd.type === "harvest" || cmd.type === "harvestStarfish") {
     playSfx("harvest");
     burst(cmd.x, cmd.y, "#c6ff4a", 10);
-    floatText(cmd.x, cmd.y, "+farm", "#c6ff4a");
+    floatText(cmd.x, cmd.y, "+HARVEST", "#c6ff4a");
   } else if (cmd.type === "train") {
     playSfx("train");
     const city = g.cities.find((c) => c.id === cmd.cityId);
@@ -515,17 +530,71 @@ function paintHud(): void {
       <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap">Settings</div></button>
       <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap">Game Stats</div></button>
       <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap">Tech Tree</div></button>
+      <button class="round-btn" id="nextunit"><div class="disc">⟳</div><div class="cap">Next Unit</div></button>
       <button class="round-btn ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap">End Turn</div></button>`;
     br.querySelectorAll("[data-go]").forEach((b) => {
       b.addEventListener("click", () => { ui.screen = b.getAttribute("data-go") as UiState["screen"]; paint(); });
     });
+    br.querySelector("#nextunit")!.addEventListener("click", () => cycleIdleUnit());
     br.querySelector("#endturn")!.addEventListener("click", () => apply({ type: "endTurn" }));
   }
+  paintHelper();
+}
+
+function idleUnits(): Unit[] {
+  if (!ui.game) return [];
+  return ui.game.units.filter((u) => u.owner === 0 && canAct(u));
 }
 
 function idleReady(): boolean {
   if (!ui.game || ui.game.currentPlayer !== 0) return false;
-  return !ui.game.units.some((u) => u.owner === 0 && canAct(u));
+  if (idleUnits().length) return false;
+  const p = ui.game.players[0];
+  if (p.energy >= 2) {
+    for (const t of ui.game.tiles) {
+      if (legalTileActions(ui.game, t.x, t.y).some((a) => a.type === "harvest")) return false;
+    }
+  }
+  return true;
+}
+
+function cycleIdleUnit(): void {
+  if (!ui.game) return;
+  const list = idleUnits();
+  if (!list.length) {
+    playSfx("ui");
+    return;
+  }
+  const idx = list.findIndex((u) => u.id === ui.selected);
+  const next = list[(idx + 1 + list.length) % list.length];
+  ui.selected = next.id;
+  ui.selectedTile = { x: next.x, y: next.y };
+  const p = iso(next.x, next.y);
+  camGoal.x = p.x;
+  camGoal.y = p.y;
+  playSfx("select");
+  paintChrome();
+}
+
+function paintHelper(): void {
+  const el = appEl.querySelector("#helper");
+  if (!el || !ui.game || ui.screen !== "game") {
+    if (el) el.innerHTML = "";
+    return;
+  }
+  const sel = ui.selected ? ui.game.units.find((u) => u.id === ui.selected) : undefined;
+  if (!sel || sel.owner !== 0) {
+    const n = idleUnits().length;
+    el.innerHTML = n ? `${n} unit${n === 1 ? "" : "s"} can still act — Next Unit or tap one.` : idleReady() ? "No high-value actions left — End Turn." : "";
+    return;
+  }
+  const atks = legalAttacks(ui.game, sel);
+  const canMove = legalMoves(ui.game, sel).length > 0;
+  el.innerHTML = atks.length
+    ? "Select a red mark to attack"
+    : canMove
+      ? "Select a blue mark to move"
+      : "This unit has acted";
 }
 
 function paintCoach(): void {
@@ -536,7 +605,7 @@ function paintCoach(): void {
     return;
   }
   el.hidden = false;
-  el.innerHTML = `<b>First drop.</b> Tap a cyan ring to step · <b>T</b> tech · <b>E</b> end turn.`;
+  el.innerHTML = `<b>First drop.</b> Select a blue mark to move · <b>N</b> next unit · <b>E</b> end turn.`;
 }
 
 function rankOf(g: GameState, pid: PlayerId): string {
@@ -554,7 +623,7 @@ function paintSelect(sel?: Unit): void {
     const atks = sel.owner === 0 ? legalAttacks(ui.game, sel) : [];
     const canMove = sel.owner === 0 && legalMoves(ui.game, sel).length > 0;
     const hint = sel.owner === 0
-      ? (atks.length ? "Tap a pulsing red ! to strike." : canMove ? "Tap a glowing cyan tile to move." : "Acted — End Turn when ready.")
+      ? (atks.length ? "Select a red mark to attack" : canMove ? "Select a blue mark to move" : "Acted — End Turn when ready.")
       : `${d.name}`;
     const preview = atks.slice(0, 2).map((t) => {
       const pv = previewUnits(ui.game!, sel, t);
@@ -676,8 +745,16 @@ function paintOverlay(): void {
   }
   if (ui.screen === "stats") {
     const g = ui.game;
+    const you = scoreBreakdown(g, 0);
     el.innerHTML = `<div class="overlay" data-screen="stats"><button class="back-arrow" id="back">‹</button><div class="panel"><h3>Game Stats</h3>
       ${g.players.map((p) => `<div class="row"><span>${FACTIONS[p.faction].name}</span><span>${computeScore(g, p.id)}</span></div>`).join("")}
+      <h3 style="margin-top:16px;font-weight:500">You</h3>
+      <div class="row"><span>Army</span><span>${you.army}</span></div>
+      <div class="row"><span>Science</span><span>${you.science}</span></div>
+      <div class="row"><span>Cities</span><span>${you.cities}</span></div>
+      <div class="row"><span>Territory</span><span>${you.territory}</span></div>
+      <div class="row"><span>Explore</span><span>${you.explore}</span></div>
+      <div class="row"><span>Wonders</span><span>${you.wonders}</span></div>
     </div></div>`;
     el.querySelector("#back")!.addEventListener("click", () => { ui.screen = "game"; paint(); });
     return;
@@ -710,26 +787,21 @@ function paintTechTree(c: HTMLCanvasElement): void {
   c.height = r.height * devicePixelRatio;
   const ctx = c.getContext("2d")!;
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-  ctx.fillStyle = "#061018";
+  ctx.fillStyle = "#041018";
   ctx.fillRect(0, 0, r.width, r.height);
-  for (let i = 0; i < 5; i++) {
-    const gx = (r.width / 6) * (i + 1);
-    const gy = r.height * (0.25 + (i % 2) * 0.35);
-    const grd = ctx.createRadialGradient(gx, gy, 10, gx, gy, 180);
-    grd.addColorStop(0, "rgba(40, 140, 180, 0.22)");
-    grd.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.arc(gx, gy, 180, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.strokeStyle = "rgba(80,180,220,0.08)";
+  ctx.lineWidth = 1;
+  for (let x = 40; x < r.width; x += 48) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, r.height); ctx.stroke();
+  }
+  for (let y = 40; y < r.height; y += 48) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(r.width, y); ctx.stroke();
   }
   drawStarfield(ctx, r.width, r.height, g.seed + 9, true);
-  const cx = r.width / 2;
-  const cy = r.height / 2 + 10;
   const cities = cityCount(g, 0);
   const literacy = p.techs.includes("cognition");
-  const pos = techLayout(cx, cy);
-  ctx.strokeStyle = "#3a3a3a";
+  const pos = techColumns(r.width, r.height);
+  ctx.strokeStyle = "rgba(90,200,255,0.35)";
   ctx.lineWidth = 2;
   for (const id of TECH_LIST) {
     const t = techDef(id);
@@ -737,11 +809,21 @@ function paintTechTree(c: HTMLCanvasElement): void {
     const a = pos[t.parent];
     const b = pos[id];
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    ctx.moveTo(a.x, a.y + 18);
+    ctx.lineTo(b.x, b.y - 18);
     ctx.stroke();
   }
-  drawHelmetMedallion(ctx, p.faction, cx, cy, 28, FACTIONS[p.faction].color);
+  const branches = [
+    { name: "Hunt", x: pos.tracking.x },
+    { name: "Grav", x: pos.gravMobility.x },
+    { name: "Supply", x: pos.logistics.x },
+    { name: "Ridge", x: pos.ridgecraft.x },
+    { name: "Tide", x: pos.aquaculture.x },
+  ];
+  ctx.textAlign = "center";
+  ctx.font = "bold 13px system-ui";
+  ctx.fillStyle = "#7ffff6";
+  for (const b of branches) ctx.fillText(b.name.toUpperCase(), b.x, 58);
   for (const id of TECH_LIST) {
     const t = techDef(id);
     const { x, y } = pos[id];
@@ -749,29 +831,29 @@ function paintTechTree(c: HTMLCanvasElement): void {
     const open = canResearch(p.techs, id);
     const cost = techCost(t.tier, cities, literacy);
     ctx.beginPath();
-    ctx.arc(x, y, 22, 0, Math.PI * 2);
-    ctx.fillStyle = have ? "#3db85a" : open ? "#3d8cff" : "#2a2a2a";
-    if (open && !have) {
-      ctx.shadowColor = "#3d8cff";
-      ctx.shadowBlur = 16;
-    }
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fillStyle = have ? "#2f9e55" : open ? "#2d8cff" : "#1b2430";
+    if (open && !have) { ctx.shadowColor = "#2d8cff"; ctx.shadowBlur = 14; }
     ctx.fill();
     ctx.shadowBlur = 0;
+    ctx.strokeStyle = have ? "#7dff9a" : open ? "#9fd4ff" : "#3a4654";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
     if (open && !have) {
       ctx.fillStyle = "#fff";
-      ctx.font = "bold 13px system-ui";
-      ctx.textAlign = "center";
+      ctx.font = "bold 12px system-ui";
       ctx.fillText(String(cost), x, y + 4);
+    } else if (have) {
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px system-ui";
+      ctx.fillText("✓", x, y + 4);
     }
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 13px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText(t.name, x, y + 36);
-    ctx.fillStyle = "rgba(200,220,230,0.8)";
-    ctx.font = "11px system-ui";
-    ctx.fillText(t.unlocks.split("·")[0].trim(), x, y + 50);
-    const hit = document.createElement("div");
-    void hit;
+    ctx.font = "12px system-ui";
+    ctx.fillText(t.name, x, y + 34);
+    ctx.fillStyle = "rgba(190,220,230,0.75)";
+    ctx.font = "10px system-ui";
+    ctx.fillText(t.unlocks.split("·")[0].trim(), x, y + 46);
   }
   c.onclick = (e) => {
     const rect = c.getBoundingClientRect();
@@ -779,36 +861,33 @@ function paintTechTree(c: HTMLCanvasElement): void {
     const y = e.clientY - rect.top;
     for (const id of TECH_LIST) {
       const pnt = pos[id];
-      if ((x - pnt.x) ** 2 + (y - pnt.y) ** 2 < 26 ** 2) {
+      if ((x - pnt.x) ** 2 + (y - pnt.y) ** 2 < 28 ** 2) {
         if (canResearch(p.techs, id)) apply({ type: "research", tech: id });
       }
     }
   };
 }
 
-function techLayout(cx: number, cy: number): Record<TechId, { x: number; y: number }> {
+function techColumns(w: number, h: number): Record<TechId, { x: number; y: number }> {
   const roots: TechId[] = ["tracking", "gravMobility", "logistics", "ridgecraft", "aquaculture"];
-  const angles = [-Math.PI * 0.72, -Math.PI * 0.28, Math.PI * 0.12, Math.PI * 0.55, Math.PI * 0.95];
   const out = {} as Record<TechId, { x: number; y: number }>;
-  roots.forEach((id, i) => {
-    const a = angles[i];
-    placeBranch(out, id, cx, cy, a, 100);
-  });
-  return out;
-}
-
-function placeBranch(out: Record<TechId, { x: number; y: number }>, root: TechId, cx: number, cy: number, ang: number, dist: number): void {
-  out[root] = { x: cx + Math.cos(ang) * dist, y: cy + Math.sin(ang) * dist };
-  const kids = TECH_LIST.filter((id) => techDef(id).parent === root);
-  kids.forEach((id, i) => {
-    const spread = kids.length === 1 ? 0 : (i === 0 ? -0.28 : 0.28);
-    const a2 = ang + spread;
-    out[id] = { x: cx + Math.cos(a2) * (dist + 96), y: cy + Math.sin(a2) * (dist + 96) };
-    const grand = TECH_LIST.filter((g) => techDef(g).parent === id);
-    grand.forEach((g) => {
-      out[g] = { x: cx + Math.cos(a2) * (dist + 192), y: cy + Math.sin(a2) * (dist + 192) };
+  const top = 110;
+  const mid = top + Math.min(150, h * 0.22);
+  const leaf = mid + Math.min(150, h * 0.22);
+  roots.forEach((root, i) => {
+    const x = w * (0.12 + i * 0.19);
+    out[root] = { x, y: top };
+    const kids = TECH_LIST.filter((id) => techDef(id).parent === root);
+    kids.forEach((id, k) => {
+      const kx = x + (k === 0 ? -42 : 42);
+      out[id] = { x: kx, y: mid };
+      const grand = TECH_LIST.filter((g) => techDef(g).parent === id);
+      grand.forEach((g) => {
+        out[g] = { x: kx, y: leaf };
+      });
     });
   });
+  return out;
 }
 
 function levelLabel(o: LevelUpReward): string {
@@ -830,9 +909,13 @@ function paintModal(): void {
   if (!el || !ui.game) return;
   if (ui.game.pendingLevelUp && ui.game.currentPlayer === 0) {
     const city = ui.game.cities.find((c) => c.id === ui.game!.pendingLevelUp!.cityId);
-    el.innerHTML = `<div class="modal" data-screen="levelup"><div class="box">
+    const opts = ui.game.pendingLevelUp.options;
+    el.innerHTML = `<div class="modal" data-screen="levelup"><div class="box level-box">
       <h3>${city?.name ?? "Colony"} leveled up</h3>
-      ${ui.game.pendingLevelUp.options.map((o) => `<button data-r="${o}">${levelLabel(o)}</button>`).join("")}
+      <p class="level-sub">Turn paused — pick a reward</p>
+      <div class="level-grid">
+        ${opts.map((o, i) => `<button class="level-card" data-r="${o}"><span class="pick">${i === 0 ? "A" : i === 1 ? "B" : String.fromCharCode(65 + i)}</span>${levelLabel(o)}</button>`).join("")}
+      </div>
     </div></div>`;
     el.querySelectorAll("button").forEach((b) => {
       b.addEventListener("click", () => apply({ type: "levelUp", reward: b.getAttribute("data-r") as LevelUpReward }));
@@ -844,13 +927,21 @@ function paintModal(): void {
 
 function renderEnd(): void {
   const g = ui.game!;
-  const ranked = g.players.map((p) => ({ p, s: finalScore(g, p.id) })).sort((a, b) => b.s - a.s);
+  const ranked = g.players.map((p) => ({ p, s: finalScore(g, p.id), b: scoreBreakdown(g, p.id) })).sort((a, b) => b.s - a.s);
   const win = ranked[0];
   const youWin = win.p.id === 0;
-  appEl.innerHTML = `<div class="end-screen" data-screen="end"><h2 style="text-align:center;margin-top:72px">GRIDFALL</h2>
+  const you = ranked.find((r) => r.p.id === 0)!;
+  appEl.innerHTML = `<div class="end-screen" data-screen="end"><h2 style="text-align:center;margin-top:56px">GRIDFALL</h2>
     <div class="end-hero">${youWin ? "ORBIT SECURED" : "SIGNAL LOST"} · ${FACTIONS[win.p.faction].name}</div>
-    <div class="panel" style="max-width:480px;margin:24px auto;padding:20px">
+    <div class="panel" style="max-width:520px;margin:16px auto;padding:20px">
       ${ranked.map((r, i) => `<div class="row"><span>${i + 1}. ${FACTIONS[r.p.faction].name}${r.p.id === 0 ? " (you)" : ""}</span><span>${r.s}</span></div>`).join("")}
+      <h3 style="margin:18px 0 8px;font-weight:500">Your breakdown</h3>
+      <div class="row"><span>Army</span><span>${you.b.army}</span></div>
+      <div class="row"><span>Science</span><span>${you.b.science}</span></div>
+      <div class="row"><span>Cities</span><span>${you.b.cities}</span></div>
+      <div class="row"><span>Territory</span><span>${you.b.territory}</span></div>
+      <div class="row"><span>Explore</span><span>${you.b.explore}</span></div>
+      <div class="row"><span>Wonders</span><span>${you.b.wonders}</span></div>
       <button class="play-btn" id="again">Again</button>
     </div></div>`;
   appEl.querySelector("#again")!.addEventListener("click", () => {
@@ -864,6 +955,9 @@ function renderEnd(): void {
 function onKey(e: KeyboardEvent): void {
   if (e.key === "e" || e.key === "E") {
     if (ui.screen === "game") apply({ type: "endTurn" });
+  }
+  if (e.key === "n" || e.key === "N") {
+    if (ui.screen === "game") cycleIdleUnit();
   }
   if (e.key === "t" || e.key === "T") {
     if (ui.screen === "game") { ui.screen = "tech"; paint(); }

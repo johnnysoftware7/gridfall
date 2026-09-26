@@ -9,11 +9,12 @@ export function drawUnit(
   type: UnitType,
   color: string,
   faction: FactionId,
-  opts: { glow?: boolean; hp?: number; maxHp?: number; hidden?: boolean },
+  opts: { glow?: boolean; hp?: number; maxHp?: number; hidden?: boolean; badgeScale?: number; hopArc?: number },
 ): void {
   const p = iso(x, y);
+  const badge = opts.badgeScale ?? 1;
   ctx.save();
-  ctx.translate(p.x, p.y - 16);
+  ctx.translate(p.x, p.y - 16 - (opts.hopArc ?? 0));
   ctx.scale(1.42, 1.42);
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.beginPath();
@@ -21,12 +22,18 @@ export function drawUnit(
   ctx.fill();
   if (opts.hidden) ctx.globalAlpha = 0.35;
   if (opts.glow) {
-    ctx.shadowColor = "#5ef6ff";
-    ctx.shadowBlur = 16;
-    ctx.strokeStyle = "#7ffff6";
-    ctx.lineWidth = 3;
+    const pulse = 0.55 + Math.sin((typeof performance !== "undefined" ? performance.now() : 0) * 0.01) * 0.25;
+    ctx.shadowColor = "#3df6ff";
+    ctx.shadowBlur = 22;
+    ctx.strokeStyle = `rgba(80, 240, 255, ${pulse})`;
+    ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.ellipse(0, 12, 17, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 13, 20, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#b8ffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 13, 14, 7, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
   }
@@ -92,8 +99,11 @@ export function drawUnit(
   }
 
   if (opts.hp !== undefined && opts.maxHp !== undefined) {
+    ctx.save();
+    ctx.scale(badge, badge);
     drawHp(ctx, -18, -28, opts.hp, opts.maxHp);
     drawTypeIcon(ctx, 14, -28, type);
+    ctx.restore();
   }
   ctx.restore();
 }

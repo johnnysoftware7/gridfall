@@ -4,35 +4,52 @@ import { techDef } from "../data/techs";
 import type { GameState, PlayerId } from "./types";
 import { player } from "./queries";
 
-export function computeScore(state: GameState, pid: PlayerId): number {
+export interface ScoreBreakdown {
+  army: number;
+  science: number;
+  cities: number;
+  territory: number;
+  explore: number;
+  wonders: number;
+  total: number;
+}
+
+export function scoreBreakdown(state: GameState, pid: PlayerId): ScoreBreakdown {
   const p = player(state, pid);
-  let score = 0;
+  let army = 0;
+  let science = 0;
+  let cities = 0;
+  let territory = 0;
+  let explore = 0;
+  let wonders = 0;
   for (const u of state.units) {
     if (u.owner !== pid) continue;
     const d = unitDef(u.type);
-    score += d.super ? SUPER_UNIT_SCORE : d.cost * UNIT_SCORE_PER_COST;
+    army += d.super ? SUPER_UNIT_SCORE : d.cost * UNIT_SCORE_PER_COST;
   }
   for (const t of state.tiles) {
-    if (t.owner === pid) score += TERRITORY_SCORE;
-    if (p.explored[t.y * state.size + t.x]) score += EXPLORE_SCORE;
+    if (t.owner === pid) territory += TERRITORY_SCORE;
+    if (p.explored[t.y * state.size + t.x]) explore += EXPLORE_SCORE;
   }
   for (const c of state.cities) {
     if (c.owner !== pid) continue;
-    score += CITY_SCORE_BASE + CITY_SCORE_PER_LEVEL * Math.max(0, c.level - 1);
-    score += c.parks * PARK_SCORE;
-    if (c.monument) score += MONUMENT_SCORE;
+    cities += CITY_SCORE_BASE + CITY_SCORE_PER_LEVEL * Math.max(0, c.level - 1);
+    cities += c.parks * PARK_SCORE;
+    if (c.monument) wonders += MONUMENT_SCORE;
   }
   for (const t of state.tiles) {
     if (t.owner !== pid) continue;
     if (t.building === "beacon" || t.building === "forestBeacon" || t.building === "ridgeBeacon" || t.building === "shelfBeacon") {
       const lvl = Math.max(1, t.templeLevel);
-      score += Math.min(500, TEMPLE_SCORE_BASE + TEMPLE_SCORE_BASE * (lvl - 1));
+      wonders += Math.min(500, TEMPLE_SCORE_BASE + TEMPLE_SCORE_BASE * (lvl - 1));
     }
   }
-  for (const tech of p.techs) {
-    score += techDef(tech).tier * TECH_SCORE_PER_TIER;
-  }
-  return score;
+  for (const tech of p.techs) science += techDef(tech).tier * TECH_SCORE_PER_TIER;
+  return { army, science, cities, territory, explore, wonders, total: army + science + cities + territory + explore + wonders };
+}
+
+export function computeScore(state: GameState, pid: PlayerId): number {
+  return scoreBreakdown(state, pid).total;
 }
 
 export function perfectionMultiplier(opponents: number, difficulty: "easy" | "normal" | "hard" | "crazy"): number {

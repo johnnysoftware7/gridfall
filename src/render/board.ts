@@ -6,7 +6,7 @@ import type { GameState, PlayerId } from "../engine/types";
 import { drawFence, drawFog, drawForest, drawResource, drawRidge, drawRoad, drawRuin, drawTile } from "./art/terrain";
 import { drawSpire } from "./art/helmets";
 import { drawUnit } from "./art/units";
-import { drawFx, fx } from "./fx";
+import { drawFx, fx, hopAt } from "./fx";
 import { diamond, iso, type Camera } from "./iso";
 
 export function drawStarfield(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number, skipBg = false): void {
@@ -120,15 +120,23 @@ export function drawBoard(
     drawFence(ctx, x, y, col, edges);
   }
 
-  const pulse = 0.38 + Math.sin((fx.now || 0) * 0.007) * 0.18;
+  const pulse = 0.45 + Math.sin((fx.now || 0) * 0.008) * 0.2;
   for (const m of view.moves) {
-    diamond(ctx, m.x, m.y, `rgba(80,255,245,${pulse})`, "#b8ffff");
+    diamond(ctx, m.x, m.y, `rgba(30,120,255,${0.22 + pulse * 0.15})`, "#4da3ff");
     const ip = iso(m.x, m.y);
     ctx.save();
-    ctx.strokeStyle = `rgba(180,255,255,${0.55 + pulse})`;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(50,170,255,${0.75 + pulse})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "#2d8cff";
+    ctx.shadowBlur = 10;
     ctx.beginPath();
-    ctx.ellipse(ip.x, ip.y, 16, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(ip.x, ip.y + 2, 20, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#dff2ff";
+    ctx.lineWidth = 1.6;
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.ellipse(ip.x, ip.y + 2, 13, 6.5, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
@@ -167,20 +175,30 @@ export function drawBoard(
     if (!u) continue;
     if (u.hidden && u.owner !== view.pid) continue;
     const fac = FACTIONS[state.players[u.owner].faction];
-    drawUnit(ctx, x, y, u.type, fac.color, fac.id, {
+    const hop = hopAt(u.id);
+    const dx = hop ? hop.x : u.x;
+    const dy = hop ? hop.y : u.y;
+    drawUnit(ctx, dx, dy, u.type, fac.color, fac.id, {
       glow: u.owner === view.pid && canAct(u),
       hp: u.hp,
       maxHp: u.maxHp,
       hidden: u.hidden && u.owner === view.pid,
+      badgeScale: Math.max(1, 1.35 / Math.max(0.55, cam.zoom)),
+      hopArc: hop?.arc ?? 0,
     });
   }
 
   for (const a of view.attacks) {
     const ip = iso(a.x, a.y);
-    const bounce = Math.sin((fx.now || 0) * 0.01) * 2;
+    const bounce = Math.sin((fx.now || 0) * 0.012) * 2;
     ctx.save();
-    ctx.shadowColor = "#ff3040";
+    ctx.strokeStyle = `rgba(255,40,50,${0.85})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "#ff2030";
     ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.ellipse(ip.x, ip.y + 2, 20, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.fillStyle = "#e22424";
     ctx.beginPath();
     ctx.arc(ip.x, ip.y - 40 + bounce, 15, 0, Math.PI * 2);

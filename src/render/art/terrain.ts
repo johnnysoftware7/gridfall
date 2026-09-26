@@ -204,11 +204,13 @@ export function drawFence(ctx: CanvasRenderingContext2D, x: number, y: number, c
     { x: p.x - TILE_W / 2, y: p.y },
   ];
   ctx.save();
+  const t = typeof performance !== "undefined" ? performance.now() : 0;
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = 2.4;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 7;
+  ctx.shadowBlur = 8 + Math.sin(t * 0.006) * 3;
   ctx.setLineDash([5, 3]);
+  ctx.lineDashOffset = -t * 0.02;
   ctx.globalAlpha = 0.95;
   for (let i = 0; i < 4; i++) {
     if (!edges[i]) continue;

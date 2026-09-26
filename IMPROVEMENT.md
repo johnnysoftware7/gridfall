@@ -84,3 +84,45 @@ Target: all three ≥ 8 and above that reference on futuristic polish.
 **Residual gaps:** tech tree still denser in Polytopia; late-game spectacle (navy battles, wonders) is thinner; click-to-iso can still miss on phone-sized viewports; no authored music bed.
 
 ---
+
+## Polytopia recording targets (2026-09-26)
+
+Hard targets from John’s ~25 min phone playthrough. IP: original names/art only.
+
+### Must MATCH
+
+| Target | Status | Notes |
+|---|---|---|
+| Bright blue move rings + bright red attack rings | **done** | Saturated blue ellipses on legal steps; red ring + `!` on strike tiles |
+| Helper text “Select a blue mark to move” / “Select a red mark to attack” | **done** | Center helper + selection-card copy; first-drop coach uses the same verb |
+| Instant combat (~0.5s): hop/flash/floats/particles, no laser drama | **done** | 260ms tile hop, punch flash, −HP / +XP / harvest floats |
+| HUD: Score / Energy(+inc) / Turn top-center; Settings / Stats / Tech / End Turn bottom-right; sel+actions bottom ~20% | **done** | Next Unit added beside End Turn; card stays bottom-left thumb reach |
+| Glance readability at zoom-out (colors, HP, borders, resources, fog) | **done** | HP/type badges scale with 1/zoom; faction fences pulse; fog is dark glass |
+
+### Must BEAT
+
+| Target | Status | Notes |
+|---|---|---|
+| Tech tree: 5 roots / 25 techs / same costs, clearer than constellation | **done** | Hunt / Grav / Supply / Ridge / Tide columns + unlock captions |
+| Ambient juice: neon fences/maglev, fog static, living board | **done** | Dash-offset fences, water shimmer, resource glints, star twinkle |
+| Idle-unit glow + cycle control; End Turn pulses when no high-value actions | **done** | Double cyan glow; Next Unit button + `N`; End Turn pulses when no act/harvest |
+
+### Also from the recording
+
+| Target | Status | Notes |
+|---|---|---|
+| City level-up A/B overlay that pauses the turn | **done** | Modal A/B cards; reducer already blocks other cmds while pending |
+| Snappy unit hop | **done** | 260ms ease-out hop with arc |
+| Floating +XP / −HP / harvest particles | **done** | City +XP, combat −HP, +HARVEST |
+| Opponent turns resolve fast | **done** | Instant AI resolve + short “Rivals moving” banner |
+| Victory score breakdown (Army / Science / Cities …) | **done** | Army, Science, Cities, Territory, Explore, Wonders |
+
+### Cycle 5 scores (after this pass)
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.3 | Blue/red marks read at a glance; column tech; living fences; hop |
+| Playability | 8.4 | Exact helper verbs, Next Unit, A/B level-up, End Turn ready-state |
+| Fun | 8.2 | Hop + instant fights + floats; victory breakdown. Late-game navy still thin. |
+
+---
