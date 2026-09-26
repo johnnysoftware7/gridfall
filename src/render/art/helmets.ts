@@ -1,3 +1,4 @@
+/** Unused by the live WebGL board (`src/render/gl/`). Kept as a 2D fallback kit. */
 import type { FactionId } from "../../engine/types";
 
 /** Unique low-poly helmets. Face is a peach cube; hat is faction-coloured. */

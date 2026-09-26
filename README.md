@@ -1,6 +1,6 @@
-# GRIDFALL
+# REBOOT
 
-A single-player 4X in the browser. The rules, numbers, pacing, and screen layout follow *The Battle of Polytopia*; the setting is year 3100 on a terraformed ocean world. Every pixel is drawn in Canvas 2D. No Polytopia art, names, fonts, or audio ship in this build.
+A single-player 4X in the browser. The rules, numbers, pacing, and screen layout follow *The Battle of Polytopia*; the setting is year 3100 on a terraformed ocean world. The board and trailer heroes render in WebGL (Three.js); HUD chrome stays HTML/CSS. No Polytopia art, names, fonts, or audio ship in this build.
 
 ## Play
 
@@ -34,6 +34,6 @@ Read **DESIGN.md** for the name map, **REFERENCE.md** for the sourced rules, **D
 
 ## Stubs (visible in Settings / README, not silent)
 
-- Music and SFX toggles do nothing — no original soundtrack was composed.
+- Music and SFX are original WebAudio beds (no licensed or Polytopia samples). Settings toggles start/stop them.
 - Corner beacons on the map rim are cosmetic.
 - Special-tribe units from the real game (Amphibian, Mooni, …) are out of scope.

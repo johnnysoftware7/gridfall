@@ -1,10 +1,10 @@
-# PARITY — GRIDFALL vs official screenshots
+# PARITY — REBOOT vs official screenshots
 
-Official Polytopia shots stay in gitignored `reference/screenshots/` and are never shipped. GRIDFALL shots: `tests/e2e/shots/`. Scoring is layout / information / readability, 1–5. Under 4 was fixed and recaptured (two rounds).
+Official Polytopia shots stay in gitignored `reference/screenshots/` and are never shipped. REBOOT shots: `tests/e2e/shots/`. Scoring is layout / information / readability, 1–5. Under 4 was fixed and recaptured (two rounds).
 
 ## Pair 1 — Faction select (S1)
 
-| | Official | GRIDFALL |
+| | Official | REBOOT |
 | --- | --- | --- |
 | File | `reference/screenshots/S1.jpg` | `tests/e2e/shots/gridfall-S1-faction.png` |
 | Layout | Warm pink→blue sky, `- PICK YOUR TRIBE -`, back arrow, helmet medallions, low-poly hills and water | Same stack: `- PICK YOUR FACTION -`, Regular Factions, five original medallions, back arrow, painted hills + water |
@@ -17,7 +17,7 @@ We ship five factions, not a 4×3 paid-tribe grid. No lock-star badges.
 
 ## Pair 2 — Tech tree (S2)
 
-| | Official | GRIDFALL |
+| | Official | REBOOT |
 | --- | --- | --- |
 | File | `reference/screenshots/S2.jpg` | `tests/e2e/shots/gridfall-S2-tech.png` |
 | Layout | Black void, HUD still up, back arrow, helmet centre, five branches, cost footer | Same chrome. HUD Score / Energy / Turn remains. 25 nodes on five roots. |
@@ -28,7 +28,7 @@ We ship five factions, not a 4×3 paid-tribe grid. No lock-star badges.
 
 ## Pair 3 — Board + HUD (S3)
 
-| | Official | GRIDFALL |
+| | Official | REBOOT |
 | --- | --- | --- |
 | File | `reference/screenshots/S3.jpg` | `tests/e2e/shots/gridfall-S3-board.png` |
 | Layout | Diamond in a void, Score / Stars(+n) / Turn, four round buttons | Diamond in a starfield, Score / Energy(+n) / Turn, Settings · Game Stats (rank) · Tech Tree · End Turn ✓ |
@@ -41,7 +41,7 @@ Turn-1 reveal is a small island of vision, as in early replay frames.
 
 ## Pair 4 — Cities close (S7)
 
-| | Official | GRIDFALL |
+| | Official | REBOOT |
 | --- | --- | --- |
 | File | `reference/screenshots/S7.jpg` | `tests/e2e/shots/gridfall-S7-cities.png` |
 | Layout | City name, star income, pop pill; unit HP + type; selection card when picked | Novagrid label, ⚡ income, pop dots; Trooper card bottom-left with colour name bar and HP |
@@ -52,7 +52,7 @@ Turn-1 reveal is a small island of vision, as in early replay frames.
 
 ## Pair 5 — Attack selection (replay)
 
-| | Replay | GRIDFALL |
+| | Replay | REBOOT |
 | --- | --- | --- |
 | File | `reference/frames/*` | `tests/e2e/shots/gridfall-attack.png` |
 | Layout | Card bottom-left, red markers on targets | Card + “Pick a red marker to attack.” Adjacent enemy shown. |

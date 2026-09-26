@@ -18,7 +18,7 @@ Sources win. When the prompt and the 2026-09-26 wiki / screenshots / replays dis
 12. **Temple / Beacon costs:** field/ridge/shelf 20, bioforest 15 (`Spiritualism.wiki`).
 13. **Drift Crystal (starfish) harvest = +10⚡.** No dedicated Starfish wikitext (redirect stub). Treated as the ruin-style resource grant. Logged because the value is inferred.
 14. **Verdant Pact forest rate is 1.5×, 0 grain**, not the wiki’s raw `Bardur 0.8× forest`. Sequential modifiers plus observed Bardur maps (S6, replay) are forest-dense. 0.8× would make them *less* forested than base.
-15. **Map default is Continents-like** (~45–55% water), player-picked size. Wiki Perfection is always 16×16; the prompt lets the player choose 11/14/16/18 — player choice wins as a GRIDFALL setup option.
+15. **Map default is Continents-like** (~45–55% water), player-picked size. Wiki Perfection is always 16×16; the prompt lets the player choose 11/14/16/18 — player choice wins as a REBOOT setup option.
 16. **Polysseum spectator chrome** (turn timeline, Exit-as-X) is not single-player. HUD follows S3/S6/S7 (End Turn = checkmark).
 17. **Network task (Nexus Market):** awarded when at least two colonies are connected to the Command Spire by maglev / dock chain.
 18. **Ceasefire (peace):** implemented. Player may offer; AI accepts if its army+cities utility is clearly behind. Breaking freezes the breaker and disbands their units inside the other borders this turn.
@@ -30,15 +30,15 @@ Sources win. When the prompt and the 2026-09-26 wiki / screenshots / replays dis
 
 ## Skin / UX
 
-24. **No Polytopia names, art, fonts, or audio in the build.** Inter / system-ui only. All figures are Canvas 2D paths in `src/render/art/`.
-25. **Black void → starfield.** Land edges → layered alloy + bedrock. Water edges → deep teal alloy. Fog → translucent holographic blocks with scanlines. Roads → glowing maglev. Fences → neon dashes.
+24. **No Polytopia names, art, fonts, or audio in the build.** Inter / system-ui only.
+25. **View layer is Three.js WebGL (2026-09-26 art pass).** Canvas 2D could not hit the Futuretopia bar (beveled glossy cubes, metal mechs, point lights, real thickness). `src/engine/` stays deterministic and renderer-agnostic. Board + trailer heroes render with MeshPhysicalMaterial, ACES tonemap, a dark custom PMREM, and soft shadows. UnrealBloom was tried and removed — it blew tiles and the hero into a white blob on the live board. Overlay canvas still draws HP / city names / damage floats. Old `src/render/art/` 2D paths are leftover and unused by the live board.
 26. **Tech toast copy** follows the replay: “\<faction\> discovered the secret of \<tech\>.”
 27. **When unsure about a mid-game panel not in S1–S8,** match the replay, then the wiki, then the prompt.
 
 ## Scope stubs (visible in-game, listed in README)
 
-- Audio: Settings has Music / SFX toggles; there is no soundtrack (original audio was never composed).
+- Audio: Settings Music / SFX toggles drive an authored WebAudio SFX set (select, move, attack, harvest, research, victory, …) and a light original pad bed. No Polytopia samples.
 - Lighthouse / corner beacons: drawn as map-edge markers (S8) but are cosmetic.
 - Multiplayer “Waiting for…” bar: not used (single-player).
-- Special-tribe units (Amphibian, Mooni, Hexapod, …) are out of scope — GRIDFALL only ships the five regular-faction mirrors.
+- Special-tribe units (Amphibian, Mooni, Hexapod, …) are out of scope — REBOOT only ships the five regular-faction mirrors.
 - Temple level-up over calendar time is implemented as +1 temple level every 3 turns (wiki is “over time”; exact cadence is not on the pulled pages).

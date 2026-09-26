@@ -2,7 +2,7 @@ import { FACTIONS, FACTION_ORDER } from "../data/factions";
 import { TECH_LIST, canResearch, techCost, techDef } from "../data/techs";
 import { UNITS, unitDef } from "../data/units";
 import { chooseCommands, runAiTurn } from "../ai/choose";
-import { playSfx, setSfx } from "../audio/sfx";
+import { playSfx, setMusic, setSfx } from "../audio/sfx";
 import { SAVE_KEY } from "../data/constants";
 import { createGame } from "../engine/createGame";
 import { dispatch, legalTileActions } from "../engine/actions";
@@ -11,10 +11,10 @@ import { canAct, legalAttacks, legalMoves } from "../engine/movement";
 import { cityAt, cityCount, cityIncome, current, playerIncome, tileAt, unitAt } from "../engine/queries";
 import { computeScore, finalScore, scoreBreakdown } from "../engine/score";
 import type { Command, Difficulty, FactionId, GameMode, GameState, LevelUpReward, PlayerId, TechId, Unit } from "../engine/types";
-import { drawHelmetMedallion } from "../render/art/helmets";
-import { drawBoard, drawStarfield, focusCapital } from "../render/board";
-import { burst, floatText, fx, punch, startHop, tickFx } from "../render/fx";
-import { iso, pickTile, type Camera } from "../render/iso";
+import { drawBoard, drawStarfield, focusCapital, pickBoard, projectTile } from "../render/board";
+import { paintHeroScene, paintMedal } from "../render/gl/hero";
+import { addTrauma, burst, floatText, fx, hitStop, killMark, punch, punchIn, sparks, startHop, tickFx } from "../render/fx";
+import { iso, type Camera } from "../render/iso";
 
 export interface UiState {
   screen: "faction" | "setup" | "game" | "tech" | "stats" | "settings" | "end";
@@ -30,6 +30,7 @@ export interface UiState {
   selectedTile: { x: number; y: number } | null;
   music: boolean;
   sfx: boolean;
+  moreOpen: boolean;
   hover: { x: number; y: number } | null;
   coached: boolean;
   banner: string;
@@ -49,6 +50,7 @@ const ui: UiState = {
   selectedTile: null,
   music: false,
   sfx: true,
+  moreOpen: false,
   hover: null,
   coached: false,
   banner: "",
@@ -67,11 +69,28 @@ export function mount(el: HTMLElement): void {
   window.addEventListener("resize", () => {
     if (ui.screen === "game" || ui.screen === "tech") paintBoard();
   });
+  window.addEventListener("pointerdown", (e) => {
+    if (!ui.moreOpen) return;
+    const br = appEl?.querySelector("#br");
+    if (br && br.contains(e.target as Node)) return;
+    ui.moreOpen = false;
+    if (ui.screen === "game") paintHud();
+  });
   requestAnimationFrame(tick);
   expose();
 }
 
 function tick(now: number): void {
+  if ((window as unknown as { __GRIDFALL_FREEZE?: boolean }).__GRIDFALL_FREEZE) {
+    requestAnimationFrame(tick);
+    return;
+  }
+  if (fx.hitStop > 0) {
+    tickFx(16);
+    if (ui.screen === "game" || ui.screen === "tech") paintBoard();
+    requestAnimationFrame(tick);
+    return;
+  }
   fx.now = now;
   tickFx(16);
   if (!dragging) {
@@ -84,6 +103,8 @@ function tick(now: number): void {
     camGoal.zoom = ui.cam.zoom;
   }
   if (ui.screen === "game" || ui.screen === "tech") paintBoard();
+  if (ui.screen === "faction" || ui.screen === "setup") paintFactionHero();
+  if (ui.screen === "end") paintEndHero();
   requestAnimationFrame(tick);
 }
 
@@ -96,12 +117,13 @@ function render(): void {
 
 function renderFaction(): void {
   appEl.innerHTML = `
-    <div class="faction-screen" data-screen="faction">
-      <button class="back-arrow" data-act="noop">‹</button>
-      <h1>- PICK YOUR FACTION -</h1>
-      <div class="sub">Regular Factions</div>
+    <div class="faction-screen trailer" data-screen="faction">
+      <canvas class="hero-bg" id="hero"></canvas>
+      <div class="trailer-copy">
+        <h1>REBOOT</h1>
+        <p>AN ORIGINAL YEAR-3100 4X</p>
+      </div>
       <div class="medals"></div>
-      <canvas class="landscape"></canvas>
       <div id="resume-slot"></div>
     </div>`;
   const medals = appEl.querySelector(".medals")!;
@@ -110,25 +132,26 @@ function renderFaction(): void {
     const b = document.createElement("button");
     b.className = "medal";
     b.dataset.faction = id;
-    b.innerHTML = `<canvas width="140" height="140"></canvas><div class="nm">${f.name}</div>`;
+    b.innerHTML = `<canvas width="160" height="160"></canvas><div class="nm">${f.name}</div>`;
     medals.appendChild(b);
     const c = b.querySelector("canvas")!;
-    const ctx = c.getContext("2d")!;
-    drawHelmetMedallion(ctx, id, 70, 62, 48, f.color);
+    paintMedal(c, id);
     b.onclick = () => { ui.faction = id; ui.screen = "setup"; render(); };
   }
-  paintLandscape(appEl.querySelector(".landscape") as HTMLCanvasElement);
+  paintFactionHero();
   const raw = localStorage.getItem(SAVE_KEY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as { game: GameState };
       if (parsed.game && !parsed.game.over) {
         const slot = appEl.querySelector("#resume-slot")!;
-        slot.innerHTML = `<button class="play-btn" id="resume" style="position:absolute;left:50%;bottom:18%;transform:translateX(-50%);z-index:3">Resume drop</button>`;
+        slot.innerHTML = `<button class="play-btn" id="resume" style="position:absolute;left:50%;bottom:168px;transform:translateX(-50%);z-index:3">Resume drop</button>`;
         slot.querySelector("#resume")!.addEventListener("click", () => {
           ui.game = parsed.game;
           ui.screen = "game";
           ui.cam = focusCapital(parsed.game, 0);
+          setSfx(ui.sfx);
+          setMusic(ui.music);
           playSfx("ui");
           render();
         });
@@ -137,51 +160,24 @@ function renderFaction(): void {
   }
 }
 
-function paintLandscape(c: HTMLCanvasElement): void {
-  const r = c.getBoundingClientRect();
-  c.width = r.width * devicePixelRatio;
-  c.height = r.height * devicePixelRatio;
-  const ctx = c.getContext("2d")!;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  const h = r.height;
-  const w = r.width;
-  ctx.fillStyle = "#6b8a4e";
-  mountain(ctx, w * 0.08, h * 0.72, w * 0.22, h * 0.38);
-  ctx.fillStyle = "#5a7a42";
-  mountain(ctx, w * 0.28, h * 0.78, w * 0.2, h * 0.32);
-  ctx.fillStyle = "#7a9a55";
-  mountain(ctx, w * 0.52, h * 0.7, w * 0.28, h * 0.48);
-  ctx.fillStyle = "#4e6e38";
-  mountain(ctx, w * 0.82, h * 0.74, w * 0.24, h * 0.36);
-  ctx.fillStyle = "#3a7ca5";
-  ctx.beginPath();
-  ctx.moveTo(0, h * 0.72);
-  ctx.quadraticCurveTo(w * 0.4, h * 0.66, w, h * 0.7);
-  ctx.lineTo(w, h);
-  ctx.lineTo(0, h);
-  ctx.fill();
-  ctx.fillStyle = "#2a5a80";
-  ctx.beginPath();
-  ctx.moveTo(w * 0.78, h * 0.78);
-  ctx.lineTo(w * 0.9, h * 0.62);
-  ctx.lineTo(w * 0.98, h * 0.8);
-  ctx.closePath();
-  ctx.fill();
+function paintFactionHero(): void {
+  const c = appEl?.querySelector("#hero") as HTMLCanvasElement | null;
+  if (!c) return;
+  paintHeroScene(c, ui.faction, "select");
 }
 
-function mountain(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + w * 0.35, y - h);
-  ctx.lineTo(x + w * 0.55, y - h * 0.55);
-  ctx.lineTo(x + w, y);
-  ctx.closePath();
-  ctx.fill();
+function paintEndHero(): void {
+  const c = appEl?.querySelector("#end-hero") as HTMLCanvasElement | null;
+  if (!c || !ui.game) return;
+  const ranked = ui.game.players.slice().sort((a, b) => (ui.game!.winner === a.id ? -1 : ui.game!.winner === b.id ? 1 : 0));
+  const lead = ui.game.players.find((p) => p.id === (ui.game!.winner ?? ranked[0].id)) ?? ui.game.players[0];
+  paintHeroScene(c, lead.faction, ui.game.winner === 0 ? "win" : "lose");
 }
 
 function renderSetup(): void {
   appEl.innerHTML = `
-    <div class="setup-screen" data-screen="setup">
+    <div class="setup-screen trailer-setup" data-screen="setup">
+      <canvas class="hero-bg" id="hero"></canvas>
       <button class="back-arrow" id="back">‹</button>
       <h2>BRIEFING</h2>
       <div>${FACTIONS[ui.faction].name}</div>
@@ -201,6 +197,7 @@ function renderSetup(): void {
     ui.seed = Number((appEl.querySelector("#seed") as HTMLInputElement).value) || 3100;
     startGame();
   });
+  paintFactionHero();
 }
 
 function chips(id: string, items: { id: string; label: string }[], on: string, set: (v: string) => void): void {
@@ -229,15 +226,18 @@ function startGame(): void {
   ui.selected = startU?.id ?? null;
   ui.coached = false;
   ui.screen = "game";
+  setSfx(ui.sfx);
+  setMusic(ui.music);
   save();
   render();
-  showBanner("GRIDFALL", FACTIONS[ui.faction].name, 1200);
+  showBanner("REBOOT", FACTIONS[ui.faction].name, 1200);
 }
 
 function renderGameShell(): void {
   appEl.innerHTML = `
     <canvas id="board"></canvas>
-    <div class="title-mark">GRIDFALL</div>
+    <canvas id="board-ui" class="board-ui"></canvas>
+    <div class="title-mark">REBOOT</div>
     <div class="hud-top" id="hud"></div>
     <div class="hud-br" id="br"></div>
     <div id="sel"></div>
@@ -271,7 +271,7 @@ function bindCanvas(): void {
     }
     if (!ui.game) return;
     const rect = c.getBoundingClientRect();
-    ui.hover = pickTile(e.clientX - rect.left, e.clientY - rect.top, ui.cam, rect.width, rect.height, ui.game.size);
+    ui.hover = pickBoard(c, e.clientX - rect.left, e.clientY - rect.top, ui.game.size);
   });
   c.addEventListener("pointerup", (e) => {
     const dx = e.clientX - last.x;
@@ -309,7 +309,7 @@ function onTap(cx: number, cy: number): void {
   if (!ui.game || ui.screen !== "game") return;
   const c = appEl.querySelector("#board") as HTMLCanvasElement;
   const rect = c.getBoundingClientRect();
-  const tile = pickTile(cx - rect.left, cy - rect.top, ui.cam, rect.width, rect.height, ui.game.size);
+  const tile = pickBoard(c, cx - rect.left, cy - rect.top, ui.game.size);
   if (!tile) { ui.selected = null; ui.selectedTile = null; paint(); return; }
   const g = ui.game;
   const unit = unitAt(g, tile.x, tile.y);
@@ -355,6 +355,12 @@ function apply(cmd: Command): void {
     const prev = before.cities.find((x) => x.id === c.id);
     if (prev && c.owner === 0 && c.progress > prev.progress) {
       floatText(c.x, c.y, `+XP`, "#7ecbff");
+    }
+    if (c.owner === 0 && c.monument && prev && !prev.monument) {
+      playSfx("wonder");
+      burst(c.x, c.y, "#f5d76e", 20);
+      floatText(c.x, c.y, "WONDER", "#f5d76e");
+      punch(7);
     }
   }
   if (cmd.type === "move" || cmd.type === "harvest" || cmd.type === "train") ui.coached = true;
@@ -411,11 +417,16 @@ function juice(cmd: Command, g: GameState): void {
       const a = g.units.find((u) => u.id === cmd.unitId);
       if (a) {
         const pv = previewUnits(g, a, t);
-        floatText(t.x, t.y, `-${pv.attackResult}`, "#ff6b6b");
+        if (pv.defenderDies) killMark(t.x, t.y);
+        floatText(t.x, t.y, `-${pv.attackResult}`, "#ff6b3a");
+        sparks(t.x, t.y, t.x - a.x, t.y - a.y, pv.defenderDies ? 15 : 12);
+        hitStop(pv.defenderDies ? 100 : 55);
+        addTrauma(pv.defenderDies ? 0.35 : 0.15);
+        if (pv.defenderDies) punchIn();
         const city = cityAt(g, a.x, a.y);
         if (city && city.owner === 0) floatText(city.x, city.y, "+XP", "#7ecbff");
       }
-      burst(t.x, t.y, "#ff4d4d", 14);
+      burst(t.x, t.y, "#ff4d4d", 22);
     }
     punch(5);
   } else if (cmd.type === "harvest" || cmd.type === "harvestStarfish") {
@@ -438,6 +449,23 @@ function juice(cmd: Command, g: GameState): void {
     punch(6);
   } else if (cmd.type === "endTurn") {
     playSfx("end");
+  } else if (cmd.type === "build") {
+    const kind = String(cmd.kind);
+    if (kind === "beacon" || kind.endsWith("Beacon")) {
+      playSfx("wonder");
+      burst(cmd.x, cmd.y, "#e8f6ff", 18);
+      floatText(cmd.x, cmd.y, "BEACON", "#e8f6ff");
+    } else if (kind === "dock") {
+      playSfx("train");
+      burst(cmd.x, cmd.y, "#7ecbff", 10);
+    }
+  } else if (cmd.type === "upgradeNaval") {
+    playSfx("train");
+    const u = g.units.find((x) => x.id === cmd.unitId);
+    if (u) {
+      burst(u.x, u.y, "#7ffff6", 12);
+      floatText(u.x, u.y, "HULL UP", "#7ffff6");
+    }
   }
 }
 
@@ -480,19 +508,33 @@ function paintBoard(): void {
   if (!ui.game) return;
   const c = appEl.querySelector("#board") as HTMLCanvasElement | null;
   if (!c) return;
+  const uiC = appEl.querySelector("#board-ui") as HTMLCanvasElement | null;
   const r = appEl.getBoundingClientRect();
-  const w = Math.max(1, Math.floor(r.width * devicePixelRatio));
-  const h = Math.max(1, Math.floor(r.height * devicePixelRatio));
-  if (c.width !== w || c.height !== h) {
-    c.width = w;
-    c.height = h;
+  if (uiC) {
+    const w = Math.max(1, Math.floor(r.width * devicePixelRatio));
+    const h = Math.max(1, Math.floor(r.height * devicePixelRatio));
+    if (uiC.width !== w || uiC.height !== h) {
+      uiC.width = w;
+      uiC.height = h;
+    }
+    const octx = uiC.getContext("2d")!;
+    octx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    const sel = ui.selected ? ui.game.units.find((u) => u.id === ui.selected) : undefined;
+    const moves = sel && sel.owner === 0 ? legalMoves(ui.game, sel) : [];
+    const attacks = sel && sel.owner === 0 ? legalAttacks(ui.game, sel).map((t) => ({ x: t.x, y: t.y })) : [];
+    drawBoard(c, octx, ui.game, ui.cam, {
+      pid: 0,
+      selected: ui.selected ?? undefined,
+      moves,
+      attacks,
+      hover: ui.hover,
+    });
+    return;
   }
-  const ctx = c.getContext("2d")!;
-  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   const sel = ui.selected ? ui.game.units.find((u) => u.id === ui.selected) : undefined;
   const moves = sel && sel.owner === 0 ? legalMoves(ui.game, sel) : [];
   const attacks = sel && sel.owner === 0 ? legalAttacks(ui.game, sel).map((t) => ({ x: t.x, y: t.y })) : [];
-  drawBoard(ctx, ui.game, ui.cam, {
+  drawBoard(c, null, ui.game, ui.cam, {
     pid: 0,
     selected: ui.selected ?? undefined,
     moves,
@@ -527,13 +569,27 @@ function paintHud(): void {
   const br = appEl.querySelector("#br");
   if (br) {
     br.innerHTML = `
-      <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap">Settings</div></button>
-      <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap">Game Stats</div></button>
-      <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap">Tech Tree</div></button>
-      <button class="round-btn" id="nextunit"><div class="disc">⟳</div><div class="cap">Next Unit</div></button>
-      <button class="round-btn ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap">End Turn</div></button>`;
+      <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap"><span class="full">Settings</span><span class="short">Set</span></div></button>
+      <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap"><span class="full">Game Stats</span><span class="short">Stats</span></div></button>
+      <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap"><span class="full">Tech Tree</span><span class="short">Tech</span></div></button>
+      <button class="round-btn" id="more"><div class="disc">···</div><div class="cap">More</div></button>
+      <button class="round-btn primary" id="nextunit"><div class="disc">⟳</div><div class="cap"><span class="full">Next Unit</span><span class="short">Next</span></div></button>
+      <button class="round-btn primary ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap"><span class="full">End Turn</span><span class="short">End</span></div></button>
+      <div class="more-pop ${ui.moreOpen ? "open" : ""}" id="morepop">
+        <button data-go="settings">☰ Settings</button>
+        <button data-go="stats">◉ Game Stats</button>
+      </div>`;
     br.querySelectorAll("[data-go]").forEach((b) => {
-      b.addEventListener("click", () => { ui.screen = b.getAttribute("data-go") as UiState["screen"]; paint(); });
+      b.addEventListener("click", () => {
+        ui.moreOpen = false;
+        ui.screen = b.getAttribute("data-go") as UiState["screen"];
+        paint();
+      });
+    });
+    br.querySelector("#more")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      ui.moreOpen = !ui.moreOpen;
+      paintHud();
     });
     br.querySelector("#nextunit")!.addEventListener("click", () => cycleIdleUnit());
     br.querySelector("#endturn")!.addEventListener("click", () => apply({ type: "endTurn" }));
@@ -731,7 +787,7 @@ function runSel(u: Unit, cmd: string): void {
 function paintToasts(): void {
   const el = appEl.querySelector("#toasts");
   if (!el || !ui.game) return;
-  el.innerHTML = ui.game.toasts.slice(-3).map((t) => `<div class="toast"><b>${t.title}</b><span>${t.body}</span></div>`).join("");
+  el.innerHTML = ui.game.toasts.slice(-2).map((t) => `<div class="toast"><b>${t.title}</b><span>${t.body}</span></div>`).join("");
 }
 
 function paintOverlay(): void {
@@ -763,10 +819,16 @@ function paintOverlay(): void {
     el.innerHTML = `<div class="overlay" data-screen="settings"><button class="back-arrow" id="back">‹</button><div class="panel"><h3>Settings</h3>
       <div class="row">Music <button class="chip ${ui.music ? "on" : ""}" id="m">${ui.music ? "on" : "off"}</button></div>
       <div class="row">SFX <button class="chip ${ui.sfx ? "on" : ""}" id="s">${ui.sfx ? "on" : "off"}</button></div>
+      <p class="level-sub">Original WebAudio bed — select, move, attack, harvest, research, victory. Light tide pad when Music is on.</p>
       <button class="play-btn" id="resign">Resign</button>
     </div></div>`;
     el.querySelector("#back")!.addEventListener("click", () => { ui.screen = "game"; paint(); });
-    el.querySelector("#m")!.addEventListener("click", () => { ui.music = !ui.music; paintChrome(); });
+    el.querySelector("#m")!.addEventListener("click", () => {
+      ui.music = !ui.music;
+      setMusic(ui.music);
+      if (ui.music) playSfx("ui");
+      paintChrome();
+    });
     el.querySelector("#s")!.addEventListener("click", () => {
       ui.sfx = !ui.sfx;
       setSfx(ui.sfx);
@@ -787,15 +849,17 @@ function paintTechTree(c: HTMLCanvasElement): void {
   c.height = r.height * devicePixelRatio;
   const ctx = c.getContext("2d")!;
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-  ctx.fillStyle = "#041018";
+  const bg = ctx.createRadialGradient(r.width / 2, r.height * 0.2, 40, r.width / 2, r.height / 2, r.width * 0.7);
+  bg.addColorStop(0, "#0a2030");
+  bg.addColorStop(1, "#02060c");
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, r.width, r.height);
-  ctx.strokeStyle = "rgba(80,180,220,0.08)";
+  ctx.strokeStyle = "rgba(70,200,255,0.16)";
   ctx.lineWidth = 1;
-  for (let x = 40; x < r.width; x += 48) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, r.height); ctx.stroke();
-  }
-  for (let y = 40; y < r.height; y += 48) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(r.width, y); ctx.stroke();
+  const step = 36;
+  for (let x = -40; x < r.width + 80; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + r.height * 0.58, r.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - r.height * 0.58, r.height); ctx.stroke();
   }
   drawStarfield(ctx, r.width, r.height, g.seed + 9, true);
   const cities = cityCount(g, 0);
@@ -931,9 +995,13 @@ function renderEnd(): void {
   const win = ranked[0];
   const youWin = win.p.id === 0;
   const you = ranked.find((r) => r.p.id === 0)!;
-  appEl.innerHTML = `<div class="end-screen" data-screen="end"><h2 style="text-align:center;margin-top:56px">GRIDFALL</h2>
+  appEl.innerHTML = `<div class="end-screen trailer-end" data-screen="end">
+    <canvas class="hero-bg" id="end-hero"></canvas>
+    <div class="victory-card">
+    <h2>${youWin ? "VICTORY" : "DEFEAT"}</h2>
+    <div class="rule"></div>
     <div class="end-hero">${youWin ? "ORBIT SECURED" : "SIGNAL LOST"} · ${FACTIONS[win.p.faction].name}</div>
-    <div class="panel" style="max-width:520px;margin:16px auto;padding:20px">
+    <div class="panel">
       ${ranked.map((r, i) => `<div class="row"><span>${i + 1}. ${FACTIONS[r.p.faction].name}${r.p.id === 0 ? " (you)" : ""}</span><span>${r.s}</span></div>`).join("")}
       <h3 style="margin:18px 0 8px;font-weight:500">Your breakdown</h3>
       <div class="row"><span>Army</span><span>${you.b.army}</span></div>
@@ -942,14 +1010,25 @@ function renderEnd(): void {
       <div class="row"><span>Territory</span><span>${you.b.territory}</span></div>
       <div class="row"><span>Explore</span><span>${you.b.explore}</span></div>
       <div class="row"><span>Wonders</span><span>${you.b.wonders}</span></div>
-      <button class="play-btn" id="again">Again</button>
-    </div></div>`;
-  appEl.querySelector("#again")!.addEventListener("click", () => {
+      <div class="end-actions">
+        <button class="play-btn ghost" id="again">Rematch</button>
+        <button class="play-btn ghost" id="menu">Main Menu</button>
+      </div>
+    </div></div></div>`;
+  if (youWin) playSfx("victory");
+  else playSfx("end");
+  paintEndHero();
+  const reset = (): void => {
     localStorage.removeItem(SAVE_KEY);
     ui.game = null;
     ui.screen = "faction";
     render();
+  };
+  appEl.querySelector("#again")!.addEventListener("click", () => {
+    localStorage.removeItem(SAVE_KEY);
+    startGame();
   });
+  appEl.querySelector("#menu")!.addEventListener("click", reset);
 }
 
 function onKey(e: KeyboardEvent): void {
@@ -972,6 +1051,7 @@ function save(): void {
 
 function expose(): void {
   setSfx(ui.sfx);
+  setMusic(ui.music);
   (window as unknown as { __GRIDFALL__: unknown }).__GRIDFALL__ = {
     ui,
     start: (opts?: Partial<typeof ui>) => {
@@ -988,6 +1068,17 @@ function expose(): void {
     runAis,
     selectUnit: (id: string) => { ui.selected = id; paint(); },
     goto: (s: UiState["screen"]) => { ui.screen = s; if (s === "faction" || s === "setup" || s === "end") render(); else paint(); },
+    worldToScreen: (x: number, y: number) => projectTile(x, y, 0.4),
+    aim: (x: number, y: number, zoom: number) => {
+      ui.cam.x = x;
+      ui.cam.y = y;
+      ui.cam.zoom = zoom;
+      camGoal.x = x;
+      camGoal.y = y;
+      camGoal.zoom = zoom;
+    },
+    fx,
+    paint: () => paint(),
   };
 }
 

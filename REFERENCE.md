@@ -1,4 +1,4 @@
-# GRIDFALL — Reference notes from the real game
+# REBOOT — Reference notes from the real game
 
 Sources win over the build prompt. This file records every rule number, every observed screen, and every contradiction.
 
@@ -55,13 +55,13 @@ Key observations that S1–S8 do not show:
 
 ## C. Screen / panel / button inventory
 
-| Element | Where seen | Notes for GRIDFALL skin |
+| Element | Where seen | Notes for REBOOT skin |
 | --- | --- | --- |
 | Back arrow (white circle, black chevron) | S1, S2, S4, replay tech tree | Top-left on overlays |
 | Title “- PICK YOUR TRIBE -” | S1, S4 | Become “- PICK YOUR FACTION -” |
 | Regular-tribes section header | S1, S4 | “Regular Factions” |
 | Helmet medallions | S1, S4 | Unique silhouette per faction |
-| Star lock badge | S1, S4 | Unused in GRIDFALL (five free factions) |
+| Star lock badge | S1, S4 | Unused in REBOOT (five free factions) |
 | Sky + landscape backdrop | S1, S4 | Keep warm gradient; no Polytopia helmets |
 | Top HUD: Score / Stars(+n) / Turn | S2, S3, S6, S7, replay | Stars → Energy ⚡, same layout |
 | Settings button (☰) | S3, S6, S7 | Bottom-right cluster, labelled |
@@ -97,7 +97,7 @@ Key observations that S1–S8 do not show:
 - Units that can act have a **steady cyan outline**, not a pulse (S5, S7).
 - Toasts linger ~2.5–3.5 s then fade (replay).
 - Melee killer **steps into** the vacated tile; ranged stays (wiki Combat).
-- No undo. End Turn is explicit (E key in GRIDFALL; button in both).
+- No undo. End Turn is explicit (E key in REBOOT; button in both).
 - Explorer is a translucent walker that auto-moves ~12 steps (wiki Explorer, 2026-02-16 change from 15).
 
 ## E. Rule numbers (wiki, current)
@@ -260,7 +260,7 @@ Starting techs of the five regular tribes we mirror:
 
 ### Map generation — `Map_Generation.wiki`
 
-Sizes: 11×11, 14×14, 16×16, 18×18 (plus 20 and 30, out of GRIDFALL scope).
+Sizes: 11×11, 14×14, 16×16, 18×18 (plus 20 and 30, out of REBOOT scope).
 
 Village rules: not on the edge; no two villages in any 3×3 (i.e. Chebyshev ≥ 2). Post-terrain villages also avoid the second ring from the edge.
 
@@ -305,7 +305,7 @@ Start turn on ruin, spend the action. Equal weight among legal rewards:
 
 ## F. Prompt vs sources (sources win)
 
-| Prompt | Source | GRIDFALL does |
+| Prompt | Source | REBOOT does |
 | --- | --- | --- |
 | Naval: Boat → Ship → Battleship | Those units are **removed**. Current: Port → Raft, upgrade to Scout / Rammer / Bomber (`Raft.wiki`, `Technology.wiki`) | Current wiki naval. Renames: Skiff / Hover Scout / Hull Ram / Depth Bomber. |
 | Port cost implied older | Port is **7**, +1 pop, unlocked by **Fishing** (`Port.wiki` body; Fishing page). Infobox on Port still says Sailing — body + Fishing page win. | 7, Fishing/Aquaculture. |
@@ -322,6 +322,6 @@ Start turn on ruin, spend the action. Equal weight among legal rewards:
 | Splash rounding | Combat page: `/2` no extra round. Bomber page: “rounded down”. | Combat page (`.5` HP allowed). |
 | Perfection map always 16×16 | Wiki: Perfection uses Normal (16). Prompt lets the player pick 11/14/16/18. | Player picks size (setup). |
 
-## G. What GRIDFALL must look like
+## G. What REBOOT must look like
 
 Reproduce layout, hierarchy, colour logic, and interaction flow of S1–S8 and the replay. Change only the skin: starfield void, alloy/bedrock edges, holographic fog, maglev roads, neon fences, Energy ⚡, original Canvas 2D art, original names.

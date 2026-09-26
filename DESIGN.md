@@ -1,12 +1,12 @@
-# DESIGN — Polytopia concept → GRIDFALL name
+# DESIGN — Polytopia concept → REBOOT name
 
 Setting: year 3100, a terraformed ocean world. Factions arrived by drop pod. Same rules and numbers as the current wiki (see REFERENCE.md). Skin only.
 
 ## Meta
 
-| Polytopia | GRIDFALL |
+| Polytopia | REBOOT |
 | --- | --- |
-| The Battle of Polytopia | GRIDFALL |
+| The Battle of Polytopia | REBOOT |
 | Stars | Energy (⚡) |
 | Tribe | Faction |
 | Village | Settler Outpost |
@@ -23,7 +23,7 @@ Setting: year 3100, a terraformed ocean world. Factions arrived by drop pod. Sam
 
 ## Terrain & resources
 
-| Polytopia | GRIDFALL |
+| Polytopia | REBOOT |
 | --- | --- |
 | Field | Regolith Plain |
 | Forest | Bioforest |
@@ -39,7 +39,7 @@ Setting: year 3100, a terraformed ocean world. Factions arrived by drop pod. Sam
 
 ## Factions (base-tribe mirrors)
 
-| Base tribe | GRIDFALL | Colour | Start tech | Start unit | Spawn bias |
+| Base tribe | REBOOT | Colour | Start tech | Start unit | Spawn bias |
 | --- | --- | --- | --- | --- | --- |
 | Imperius | Helix Collective | teal `#2ec4b6` | Logistics | Trooper | 2× spore, 0.5× fauna |
 | Xin-xi | Iron Meridian | orange `#e07a3d` | Ridgecraft | Trooper | 1.5× ridge, 1.5× ore |
@@ -51,7 +51,7 @@ Each faction has a unique helmet silhouette and Command Spire drawn in `src/rend
 
 ## Units
 
-| Polytopia | GRIDFALL | Cost | HP | A | D | M | R | Skills |
+| Polytopia | REBOOT | Cost | HP | A | D | M | R | Skills |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Warrior | Trooper | 2 | 10 | 2 | 2 | 1 | 1 | dash, fortify |
 | Rider | Skimmer | 3 | 10 | 2 | 1 | 2 | 1 | dash, escape, fortify |
@@ -90,7 +90,7 @@ Aquaculture ── Drift Control ── Starfix
             └─ Hull Breach ── Depthward
 ```
 
-| Polytopia | GRIDFALL | Unlocks |
+| Polytopia | REBOOT | Unlocks |
 | --- | --- | --- |
 | Hunting | Tracking | Hunt fauna |
 | Archery | Ballistics | Marksman; bioforest defence |
@@ -120,7 +120,7 @@ Aquaculture ── Drift Control ── Starfix
 
 ## Buildings
 
-| Polytopia | GRIDFALL |
+| Polytopia | REBOOT |
 | --- | --- |
 | Farm | Hydroponics |
 | Mine | Extractor |
@@ -136,7 +136,7 @@ Aquaculture ── Drift Control ── Starfix
 
 ## Monuments
 
-| Polytopia | GRIDFALL task name |
+| Polytopia | REBOOT task name |
 | --- | --- |
 | Altar of Peace | Quiet Array (Pacifist) |
 | Tower of Wisdom | Archive Spire (Genius) |

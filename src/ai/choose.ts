@@ -9,10 +9,14 @@ import type { Command, GameState, TechId, Unit, UnitType } from "../engine/types
 
 export function aggression(state: GameState): number {
   const d = current(state).difficulty;
-  if (d === "easy") return 0.7;
-  if (d === "hard") return 1.15;
-  if (d === "crazy") return 1.35;
-  return 1;
+  let base = 1;
+  if (d === "easy") base = 0.7;
+  else if (d === "hard") base = 1.15;
+  else if (d === "crazy") base = 1.35;
+  if (state.turn >= 8) base += 0.2;
+  if (state.turn >= 15) base += 0.22;
+  if (state.turn >= 22) base += 0.18;
+  return base;
 }
 
 export function chooseCommands(state: GameState): Command[] {
@@ -20,6 +24,19 @@ export function chooseCommands(state: GameState): Command[] {
   const pid = state.currentPlayer;
   let s = cloneState(state);
   const agg = aggression(s);
+
+  // a few docks first so leftover energy is not eaten by research
+  let docks = s.tiles.filter((t) => t.owner === pid && t.building === "dock").length;
+  for (const t of s.tiles) {
+    if (docks >= 4) break;
+    if (t.owner !== pid) continue;
+    const dock = legalTileActions(s, t.x, t.y).find((a) => a.type === "build" && a.kind === "dock");
+    if (dock && current(s).energy >= 7) {
+      cmds.push(dock);
+      s = dispatch(s, dock);
+      docks++;
+    }
+  }
 
   // research
   const tech = bestTech(s);
@@ -56,9 +73,17 @@ export function chooseCommands(state: GameState): Command[] {
       continue;
     }
     const farm = acts.find((a) => a.type === "build" && (a.kind === "hydroponics" || a.kind === "extractor" || a.kind === "spireTap" || a.kind === "dock"));
-    if (farm && current(s).energy >= 5) {
-      cmds.push(farm);
-      s = dispatch(s, farm);
+    if (farm && farm.type === "build") {
+      const need = farm.kind === "dock" ? 7 : 5;
+      if (current(s).energy >= need) {
+        cmds.push(farm);
+        s = dispatch(s, farm);
+      }
+    }
+    const beacon = acts.find((a) => a.type === "build" && (a.kind === "beacon" || String(a.kind).endsWith("Beacon")));
+    if (beacon && current(s).energy >= 20 && (s.turn >= 10 || cityCount(s, pid) >= 2)) {
+      cmds.push(beacon);
+      s = dispatch(s, beacon);
     }
   }
 
@@ -89,14 +114,36 @@ export function chooseCommands(state: GameState): Command[] {
     }
   }
 
-  // train
-  for (const c of s.cities.filter((c) => c.owner === pid)) {
-    if (unitAt(s, c.x, c.y)) continue;
-    const type = bestTrain(s, c.id);
-    if (type && current(s).energy >= unitDef(type).cost) {
-      const cmd: Command = { type: "train", cityId: c.id, unit: type };
+  // naval upgrades
+  for (const u of s.units.filter((x) => x.owner === pid && x.type === "skiff")) {
+    const into = bestNavalUpgrade(s);
+    if (into && current(s).energy >= (into === "depthBomber" ? 15 : 5)) {
+      const cmd: Command = { type: "upgradeNaval", unitId: u.id, into };
       cmds.push(cmd);
       s = dispatch(s, cmd);
+    }
+  }
+
+  // train + leftover extra trains for mid-late density
+  const trainPasses = s.turn >= 6 ? 2 : 1;
+  for (let pass = 0; pass < trainPasses; pass++) {
+    for (const c of s.cities.filter((c) => c.owner === pid)) {
+      if (unitAt(s, c.x, c.y)) continue;
+      const type = bestTrain(s, c.id);
+      if (type && current(s).energy >= unitDef(type).cost) {
+        const cmd: Command = { type: "train", cityId: c.id, unit: type };
+        cmds.push(cmd);
+        s = dispatch(s, cmd);
+      }
+    }
+  }
+
+  const extraTech = bestTech(s);
+  if (extraTech) {
+    const cost = researchCost(s, pid, techDef(extraTech).tier);
+    if (current(s).energy >= cost) {
+      cmds.push({ type: "research", tech: extraTech });
+      s = dispatch(s, { type: "research", tech: extraTech });
     }
   }
 
@@ -134,8 +181,11 @@ function bestTech(state: GameState): TechId | null {
     if (id === "ridgecraft") s += 6;
     if (id === "gravMobility") s += 8;
     if (id === "cultivation" || id === "canopyWorks" || id === "extraction") s += 8;
+    if (id === "driftControl" || id === "hullBreach" || id === "starfix" || id === "depthward") s += state.turn >= 6 ? 14 : 8;
+    if (id === "openCircuit" || id === "mycoweave" || id === "signalSilence") s += state.turn >= 10 ? 10 : 3;
     if (cities >= 3 && (id === "doctrine" || id === "ballistics")) s += 6;
     if (p.energy > 20 && t.tier === 3) s += 4;
+    if (state.turn >= 12 && (id === "alloyworks" || id === "chargeProtocol")) s += 6;
     scored.push({ id, s });
   }
   scored.sort((a, b) => b.s - a.s);
@@ -154,7 +204,7 @@ function pickAttack(state: GameState, u: Unit, agg: number): Command | null {
     if (city) s += 15;
     if (s > (best?.s ?? -99)) best = { id: t.id, s };
   }
-  if (best && best.s > 2) {
+  if (best && best.s > (state.turn >= 12 ? 0 : 2)) {
     if (hasSkill(u.type, "convert")) return { type: "convert", unitId: u.id, targetId: best.id };
     return { type: "attack", unitId: u.id, targetId: best.id };
   }
@@ -171,6 +221,23 @@ function pickMove(state: GameState, u: Unit): Command | null {
     if (city && city.owner !== u.owner) s += 40;
     const tile = tileAt(state, m.x, m.y);
     if (tile?.ruin) s += 18;
+    if (tile?.building === "dock" && tile.owner === u.owner && !hasSkill(u.type, "water") && playerHas(state, u.owner, "aquaculture")) {
+      s += state.turn >= 8 && cityCount(state, u.owner) >= 2 ? 44 : 14;
+    }
+    if (!hasSkill(u.type, "water") && playerHas(state, u.owner, "aquaculture") && state.turn >= 6) {
+      for (const dck of state.tiles) {
+        if (dck.building !== "dock" || dck.owner !== u.owner) continue;
+        const d = Math.max(Math.abs(dck.x - m.x), Math.abs(dck.y - m.y));
+        s += 14 / (d + 1);
+      }
+    }
+    if (hasSkill(u.type, "water")) {
+      for (const c of state.cities) {
+        if (c.owner === u.owner || c.owner === null) continue;
+        const d = Math.max(Math.abs(c.x - m.x), Math.abs(c.y - m.y));
+        s += 18 / (d + 1);
+      }
+    }
     for (const e of state.units) {
       if (e.owner === u.owner) continue;
       const p = state.players.find((pl) => pl.id === u.owner);
@@ -219,9 +286,19 @@ function bestTrain(state: GameState, _cityId: string): UnitType | null {
     if (t === "trooper") s += cityCount(state, p.id) <= 2 ? 6 : 3;
     if (t === "skimmer") s += 5;
     if (t === "marksman") s += 2;
+    if (state.turn >= 10 && (t === "marksman" || t === "bulwark" || t === "vanguard")) s += 5;
+    if (state.turn >= 16 && (t === "lancer" || t === "railgun" || t === "titan")) s += 6;
     if (best === null || s > best.s) best = { t, s };
   }
   return best?.t ?? null;
+}
+
+function bestNavalUpgrade(state: GameState): "hoverScout" | "hullRam" | "depthBomber" | null {
+  const p = current(state);
+  if (playerHas(state, p.id, "starfix") && p.energy >= 15) return "depthBomber";
+  if (playerHas(state, p.id, "hullBreach") && p.energy >= 5) return "hullRam";
+  if (playerHas(state, p.id, "driftControl") && p.energy >= 5) return "hoverScout";
+  return null;
 }
 
 export function runAiTurn(state: GameState): GameState {

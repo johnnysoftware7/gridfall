@@ -1,3 +1,4 @@
+/** Unused by the live WebGL board (`src/render/gl/`). Kept as a 2D fallback kit. */
 import type { FactionId, UnitType } from "../../engine/types";
 import { iso } from "../iso";
 import { drawHelmet } from "./helmets";
@@ -109,31 +110,103 @@ export function drawUnit(
 }
 
 function drawNaval(ctx: CanvasRenderingContext2D, type: UnitType, color: string): void {
-  ctx.fillStyle = shade(color, 0.7);
+  const t = typeof performance !== "undefined" ? performance.now() : 0;
+  const wake = 0.35 + Math.sin(t * 0.008) * 0.2;
+  ctx.save();
+  ctx.globalAlpha = 0.35 + wake;
+  ctx.strokeStyle = "#9ee8ff";
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.ellipse(0, 10, 18, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 16, 22 + wake * 6, 6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 14, 3.5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = shade(color, 0.45);
+  ctx.beginPath();
+  ctx.moveTo(-20, 10);
+  ctx.quadraticCurveTo(0, 18, 22, 10);
+  ctx.quadraticCurveTo(0, 6, -20, 10);
   ctx.fill();
+
   ctx.fillStyle = color;
-  ctx.fillRect(-8, -4, 16, 12);
+  ctx.beginPath();
+  ctx.moveTo(-16, 8);
+  ctx.lineTo(-10, -2);
+  ctx.lineTo(12, -2);
+  ctx.lineTo(20, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = shade(color, 1.15);
+  ctx.fillRect(-8, -6, 16, 6);
+  ctx.fillStyle = shade(color, 0.7);
+  ctx.fillRect(-6, 2, 12, 4);
+
+  ctx.shadowColor = "#7ffff6";
+  ctx.shadowBlur = 10 + Math.sin(t * 0.01) * 4;
+  ctx.fillStyle = `rgba(140,255,255,${0.45 + wake})`;
+  ctx.beginPath();
+  ctx.arc(-12, 8, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
   if (type === "hoverScout") {
     ctx.fillStyle = "#e8f6ff";
-    ctx.fillRect(-2, -14, 4, 12);
-  }
-  if (type === "hullRam") {
-    ctx.fillStyle = "#ccc";
+    ctx.fillRect(-2, -20, 3, 16);
     ctx.beginPath();
-    ctx.moveTo(8, 4);
-    ctx.lineTo(22, 8);
-    ctx.lineTo(8, 12);
+    ctx.moveTo(1, -20);
+    ctx.lineTo(14, -8);
+    ctx.lineTo(1, -6);
+    ctx.closePath();
     ctx.fill();
   }
+  if (type === "hullRam") {
+    ctx.fillStyle = "#d8dde4";
+    ctx.beginPath();
+    ctx.moveTo(16, 0);
+    ctx.lineTo(28, 8);
+    ctx.lineTo(16, 12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = shade(color, 0.8);
+    ctx.fillRect(-4, -10, 10, 6);
+  }
   if (type === "depthBomber") {
-    ctx.fillStyle = "#333";
-    ctx.fillRect(-12, -8, 8, 8);
+    ctx.fillStyle = "#222";
+    ctx.fillRect(-14, -12, 10, 10);
+    ctx.fillStyle = "#f6d76e";
+    ctx.beginPath();
+    ctx.arc(-9, -7, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = shade(color, 0.6);
+    ctx.fillRect(4, -8, 10, 5);
   }
   if (type === "leviathan") {
     ctx.fillStyle = color;
-    ctx.fillRect(-16, -8, 32, 18);
+    ctx.fillRect(-20, -10, 40, 20);
+    ctx.fillStyle = shade(color, 1.2);
+    ctx.fillRect(-8, -18, 16, 10);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "#f5d76e";
+    ctx.beginPath();
+    ctx.moveTo(0, -24);
+    ctx.lineTo(5, -16);
+    ctx.lineTo(-5, -16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  if (type === "ghostSkiff") {
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = "#c8f6ff";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 18, 8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 }
 

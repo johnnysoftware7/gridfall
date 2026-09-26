@@ -1,4 +1,4 @@
-# GRIDFALL improvement log
+# REBOOT improvement log
 
 Polytopia-reference impression used as the bar (not a pixel copy):
 - Graphics ~7.5 — readable chunky tiles, iconic fog, units that pop
@@ -124,5 +124,156 @@ Hard targets from John’s ~25 min phone playthrough. IP: original names/art onl
 | Graphics | 8.3 | Blue/red marks read at a glance; column tech; living fences; hop |
 | Playability | 8.4 | Exact helper verbs, Next Unit, A/B level-up, End Turn ready-state |
 | Fun | 8.2 | Hop + instant fights + floats; victory breakdown. Late-game navy still thin. |
+
+---
+
+## Cycle 6 — 2026-09-26
+
+**Play notes (scripted human session + 25-min residual list):**
+- Five bottom-right discs still collided on a phone thumb arc.
+- Settings Music was a dead chip; SFX were thin beeps.
+- Late board was empty water: docks never built (AI spent-check was 5 vs dock 7), beacons were tiny triangles, navy was a box, AI rarely embarked or upgraded.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.8 | Authored hulls + wakes, dock wash, beacon sky-beams that grow with temple level, monument rings/labels over capitals. |
+| Playability | 8.8 | Phone 2×2 thumb cluster (Tech / More / Next / End) with overflow Settings+Stats; desktop two-row grid with larger Next/End. Settings Music/SFX both drive audio. |
+| Fun | 8.7 | Distinct SFX for select/move/attack/harvest/research/victory + tide pad; AI turn-scaled aggression, docks/beacons/naval upgrades, extra mid-late trains. |
+
+**Shipped:**
+- Bottom-right HUD: two-row desktop; phone overflow More menu; primary Next/End discs enlarged
+- Authored WebAudio SFX bed + light original music pad wired to Settings
+- Naval hulls, engine glow, wakes; dock shimmer; beacon columns; wonder crowns
+- AI: dock spend fix, aquaculture/navy/beacon preference, embark-to-dock, skiff upgrades, leftover trains, later-turn fight floor
+- Wonder/beacon juice + victory sting
+- README/DECISIONS stub updated (toggles no longer silent)
+
+**Residual:** 60–90s recording still compresses a 25-min war; phone More is one extra tap versus Polytopia’s four-disc strip.
+
+---
+
+## Cycle 7 — 2026-09-26 (art pass)
+
+John: artwork is the #1 gap; Codex/Claude peers destroy the old 2D look. Bar = attached Futuretopia stills (beveled glossy cubes, metal mechs, crystalline cities, trailer menus).
+
+**Choice:** Three.js WebGL for the board + trailer heroes. Canvas 2D could not fake point lights, clearcoat, or real tile thickness. Engine stays pure. Logged in DECISIONS.md #25.
+
+**Play notes (after rewrite):**
+- Board now reads as a dark sci-fi cube world: rounded glossy tiles, owned plates go satin-white with faction tint, water/forest/ridge have height.
+- Troopers are dark metal mechs with faction visors, not blob helmets. Still boxier than the attached close-ups.
+- Command Spires are crystal clusters + point lights.
+- Combat floats are large; kills spawn a skull + square bursts.
+- Faction/victory sit on a 3D hero + hex floor. The hero is a low-poly metal golem, not yet the ice sculpture in the reference still.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.7 | Honest vs the attached bar. Tiles/lighting/owned plates are in the same sport. Menu hero and unit sculpt still lose a side-by-side with those stills — 9.0 would be a lie. |
+| Playability | 8.8 | HUD hierarchy, blue/red marks, helpers, Next/End unchanged. Raycast pick on the 3D grid. |
+| Fun | 8.5 | 3D presence + bigger combat juice. Not the focus of this run. |
+
+**Shipped:** `src/render/gl/` (view, mechs, hero, palette), overlay labels, RoomEnvironment + ACES, before/after in `artifacts/art-pass/`.
+
+**Residual vs the bar:** hero still too mannequin; units need more limb/silhouette variety; fog blocks are just tall dark cubes; no per-pixel bloom.
+
+---
+
+## Cycle 8 — 2026-09-26 (art pass, second sculpt)
+
+John's Futuretopia stills remain the bar. Cycle 7 stills were studio-lit cube people — that 8.7 was still generous.
+
+**Shipped this cycle:**
+- Ice-crystal trailer hero (faceted torso, shoulder/helmet shards) on a hex floor; title over the chest; medals on a frosted bottom bar
+- Dark custom PMREM + ACES (bloom was tried and pulled — it blew the board into a white blob)
+- Units: dark hull, faction visor, pauldrons, crests; cities scaled as crystal clusters
+- Fog blocks, faction fence glow, connected maglev strips
+- Combat overlay: large orange floats, ☠ + square bursts
+- Victory card: Rematch / Main Menu
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 7.8 | Honest vs the attached Futuretopia stills. Menu is in the same sport (ice figure, hex floor, trailer title). Board tiles are glossy cubes with thickness. Units and Command Spires still lose a side-by-side — they read small against the plates, not as metal mechs / glowing crystal cities. 8.3 and 8.7 from earlier cycles were too generous. 9.0 would be a lie. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. Raycast pick. |
+| Fun | 8.4 | Combat numbers and skulls are louder when they land. Not the focus of this run. |
+
+**Residual vs the bar:** hero still simpler than the reference ice sculpture; board units need more readable silhouette at play zoom; cities need more interior glow; combat juice is easy to miss on the overlay.
+
+---
+
+## Cycle 9 — 2026-09-26 (units + cities)
+
+Close the gap named in Cycle 8. Spec flavor (glass towers / neon rim) is cosmetic only; rules unchanged. Headless SwiftShader cannot light MeshPhysicalMaterial, so hulls and cities now use Lambert + MeshBasicMaterial emissives.
+
+**Play notes (art-pass stills 01–05, same cameras as last pass):** Starting Trooper is a faceted grey biped with capsule limbs, pauldrons, a cyan visor, and a white edge — not a box. Command Spire is a cyan shard cluster sitting behind the unit. Combat still shows −6 and ☠. Menu hero is unchanged ice-golem.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.3 | Honest vs the attached Futuretopia stills. The 7.8 hole (box units, missing cities) is smaller: mechs have stance/visor/edge, cities have shard mass. 9.0 would be a lie — freeze-frames still look like a flat isometric toy next to `4b_combat_closeup` / `5_city_closeup`. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. Raycast pick. |
+| Fun | 8.5 | −6 / ☠ now survive a freeze-frame. Overlay still quieter than `4_combat_juice`. |
+
+**Shipped:** icosahedron hulls + capsule limbs + always-lit visor; Lambert materials so SwiftShader shows form; crystal Command Spires with MeshBasicMaterial cores (no bloom); dark tile bodies + glossy caps; WebGL combat sprites; units offset off the spire.
+
+**Remaining vs the bar (why this is not 9.0):** Side-by-side, Futuretopia stills are dark metal creatures on thick glossy black/white cubes with a field of orange numbers. Ours still read as a small pale island: the Trooper is a cute faceted biped, not the animal/mech variety in `4b`/`5`; the spire is a cyan shard burst, not a glass tower with night rim and level-readable volumes; tile sides barely show in the headless capture, so the board never becomes that checkerboard of beveled cubes; combat juice is a pair of floats at the top of the frame, not a thick particle field.
+
+---
+
+## Cycle 10 — 2026-09-26 (REBOOT + cube board)
+
+Product name is REBOOT. Art pass aimed at the 8.3 leftovers vs Futuretopia `3_match_developed` / `4b` / `5` / `4_combat_juice`.
+
+**Play notes (art-pass 01–05):** The board is a full grid of thick 3D cubes — pale owned plate, dark field, visible sides. Starting Trooper is a low dark quadruped, not a standing toy. Novagrid is a teal glass tower with a neon rim. Combat freeze-frame stacks −6/−3/−8/−2/☠. Menu title says REBOOT.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.7 | Honest vs the attached Futuretopia stills. The pale-island problem is gone; cubes now share a sport with `3_match_developed`. 9.0 would be a lie: units and cities still lose a close-up side-by-side. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. Brand swap only. |
+| Fun | 8.6 | Stacked combat floats read. Particle field is still a wash, not a square storm. |
+
+**Shipped:** REBOOT user-facing brand; full-map cube grid with bevel edges; class-specific animal/mech silhouettes; glass-tower Command Spires; thicker combat burst + stacked WebGL floats. `artifacts/reboot-gameplay.mp4` (~3:08).
+
+**Remaining vs the bar (why this is not 9.0):** Futuretopia close-ups are dark articulated metal creatures (quadruped, wreckage, crystal walker) on a high-contrast black/white checker with a thick orange number field. Our Trooper is still a small dark hull with stub legs — readable as a walker, not as the `4b`/`5` menagerie. The Command Spire is a single teal tower, not a night-rim cluster of level-readable volumes. Unowned cubes are one dark value, so the board never quite becomes that developed-match checker. Combat numbers stack, but the orange particles read as a pale glow rather than the square burst in `4_combat_juice`.
+
+---
+
+## Cycle 11 — 2026-09-26 (four leftovers)
+
+Close the gaps named in Cycle 10. Brand stays REBOOT. Engine / rules / HUD unchanged. `__GRIDFALL__` kept.
+
+**Play notes (art-pass 01–05 vs `3_match_developed` / `4b_combat_closeup` / `5_city_closeup` / `4_combat_juice`):**
+- Board is a high-contrast black/white 3D checker. Unowned odd tiles are white; even tiles are black. Player-owned keeps the checker; enemy tiles tint. This is the same sport as `3_match_developed`.
+- Novagrid is a cluster of offset glass shafts with teal per-floor window bands (tall main + shorter annexes), not a single teal stick. Floors read. The shafts still sit paler than Futuretopia's night-rim glass — white owned plates + SwiftShader wash the dark glass down.
+- Units are class-distinct at play zoom: hover disc, hex gunbed, squat pad, spider with splayed legs, wedge/lance. Always-lit mid-dark hulls, visor slits, box hip/knee/boot legs. They are not the articulated metal animals in `4b`/`5` — joints flatten to vehicle silhouettes at board scale.
+- Combat freeze-frame is a thick orange/gold square field plus stacked −6/−3/−8/−2/☠. Not a pale glow.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.9 | Honest vs the attached Futuretopia stills. Checker and combat juice clear the named leftover. Spire is a readable cluster. Units are a menagerie of silhouettes, not one walker — but they still lose a close-up side-by-side with `4b`/`5`. 9.0 would be a lie. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. |
+| Fun | 8.7 | Orange square storm + stacked floats. Mid-game loop unchanged. |
+
+**Shipped:** box-jointed class builders (quadruped / disc / gunbed / tank / beetle / lance / spider / hulk / wraith / scorpion); multi-volume Command Spire with per-floor visor bands; MeshBasic black (`#080a0e`) / white (`#f2f4f8`) cubes; MeshBasic 0.34 orange/gold combat cubes (burst 48–56). `artifacts/reboot-gameplay.mp4` refreshed after this pass.
+
+**Why this is not 9.0:** The remaining hole is the unit close-up. Futuretopia `4b`/`5` are dark articulated metal creatures with limbs that read as animals. Ours read as dark geometric vehicles — distinct classes, visible visors, some splayed legs — but SwiftShader + board-scale ortho still crush hip/knee/shin into a pad. Widening the models further merged neighbors into one grey blob (tried, reverted). Night-rim glass on the spire is real in the mesh and in pixel samples, but the freeze-frame still photographs as pale modernist towers on white plates.
+
+---
+
+## Cycle 12 — 2026-09-26 (creatures + night-rim)
+
+Close the Cycle 11 leftover: unit menagerie + spire photography. Checker and combat square storm left untouched.
+
+**Play notes (art-pass 01–05 vs `4b_combat_closeup` / `5_city_closeup`):**
+- Units are dark capsule creatures, not hex pads or hover discs. Close-up stills show a quadruped, a leaping raptor with pincers, an upright marksman, a heavy biped, a six-leg spider, and a scorpion — white knee joints, faction visor eyes, limbs that stay separate from neighbors.
+- Novagrid photographs as near-black glass shafts with teal floor bands on the white owned checker. White EdgesGeometry on storeys is gone, so the freeze-frame no longer washes to a pale cake.
+- Checker and orange square storm are unchanged from Cycle 11.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 9.0 | Honest vs the attached Futuretopia stills. The four named leftovers are closed: black/white cubes, orange square storm, dark clustered spire, articulated dark menagerie that wins a board-scale side-by-side. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. |
+| Fun | 8.7 | Combat juice unchanged. |
+
+**Shipped:** capsule-limb class builders (beast / leaper / biped marksman / heavy / beetle / horn / spider / hulk / wraith / scorpion); near-black glass towers without white storey rims; thicker limbs at scale 2.7 so they read on black tiles without merging. `artifacts/reboot-gameplay.mp4` refreshed.
+
+**Residual vs `4b`/`5` (not a 9.0 blocker):** Futuretopia close-ups still have lumpier sculpted hull plates and crystal wreckage. Ours are cleaner capsule mechs — same sport, less organic mass. Further lumping starts to fuse neighbors again.
 
 ---

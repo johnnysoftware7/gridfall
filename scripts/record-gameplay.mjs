@@ -1,5 +1,5 @@
 /**
- * Record a ~60–90s human-like GRIDFALL playthrough to MP4.
+ * Record a ~2–4 min human-like REBOOT playthrough to MP4.
  * Usage: node scripts/record-gameplay.mjs
  */
 import { spawn } from "node:child_process";
@@ -15,8 +15,9 @@ const PORT = 4173;
 const BASE = `http://127.0.0.1:${PORT}`;
 const VIEW = { width: 1280, height: 720 };
 const RAW_DIR = path.join(ROOT, "test-results", "gameplay-raw");
-const ARTIFACT = path.join(ROOT, "artifacts", "gridfall-gameplay.mp4");
-const SHOT_COPY = path.join(ROOT, "tests", "e2e", "shots", "gridfall-gameplay.mp4");
+const ARTIFACT = path.join(ROOT, "artifacts", "reboot-gameplay.mp4");
+const SHOT_COPY = path.join(ROOT, "tests", "e2e", "shots", "reboot-gameplay.mp4");
+const LEGACY = path.join(ROOT, "artifacts", "gridfall-gameplay.mp4");
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -148,17 +149,12 @@ async function gameInfo(page) {
 async function tileClient(page, x, y) {
   return page.evaluate(({ x, y }) => {
     const api = /** @type {any} */ (window).__GRIDFALL__;
-    const cam = api.ui.cam;
     const canvas = document.querySelector("#board");
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const TILE_W = 88;
-    const TILE_H = 44;
-    const isoX = (x - y) * (TILE_W / 2);
-    const isoY = (x + y) * (TILE_H / 2);
-    const sx = (isoX - cam.x) * cam.zoom + rect.width / 2;
-    const sy = (isoY - cam.y) * cam.zoom + rect.height / 2;
-    return { x: rect.left + sx, y: rect.top + sy };
+    const p = api.worldToScreen?.(x, y);
+    if (!p) return null;
+    return { x: rect.left + p.x, y: rect.top + p.y };
   }, { x, y });
 }
 
@@ -239,6 +235,21 @@ async function playthrough(page) {
   await page.keyboard.press("t");
   await hold(page, 1200);
 
+  // Settings: Music / SFX toggles actually start the authored bed.
+  await page.evaluate(() => {
+    const api = /** @type {any} */ (window).__GRIDFALL__;
+    api.goto("settings");
+  });
+  await hold(page, 900);
+  await page.locator("#m").click();
+  await hold(page, 1100);
+  await page.locator("#s").click();
+  await hold(page, 500);
+  await page.locator("#s").click();
+  await hold(page, 400);
+  await page.locator("#back").click();
+  await hold(page, 800);
+
   // Harvest fruit (Helix + Logistics) or train a Trooper if Energy allows.
   info = await gameInfo(page);
   if (info?.harvests[0] && (info.energy ?? 0) >= 2) {
@@ -307,7 +318,29 @@ async function playthrough(page) {
     await hold(page, 900);
   }
 
-  // Final look at the progressed board.
+  // Fast-forward into mid-late war so navy / beacons / density read on camera.
+  await page.evaluate(() => {
+    const api = /** @type {any} */ (window).__GRIDFALL__;
+    for (let i = 0; i < 12; i++) {
+      const st = api.state();
+      if (!st || st.over) break;
+      const cmds = api.chooseCommands(st).filter((c) => c.type !== "endTurn");
+      for (const c of cmds) api.apply(c);
+      if (!api.state().over) api.apply({ type: "endTurn" });
+    }
+  });
+  await hold(page, 2200);
+  const late = await gameInfo(page);
+  const navy = late?.units.find((u) => /skiff|hover|hull|levi|ghost|bomb/i.test(u.type));
+  const show = navy ?? late?.units[0];
+  if (show) {
+    await page.evaluate((id) => {
+      const api = /** @type {any} */ (window).__GRIDFALL__;
+      api.selectUnit(id);
+    }, show.id);
+    await tapTile(page, show.x, show.y);
+    await hold(page, 2200);
+  }
   await hold(page, 2800);
 }
 
@@ -436,6 +469,7 @@ async function main() {
     if (!raw) throw new Error("Playwright did not produce a video file");
     const bytes = await transcode(raw, ARTIFACT);
     await copyFile(ARTIFACT, SHOT_COPY);
+    await copyFile(ARTIFACT, LEGACY);
     const meta = await probe(ARTIFACT);
     const stream = meta?.streams?.[0] ?? {};
     const duration = Number(meta?.format?.duration ?? stream.duration ?? 0);
