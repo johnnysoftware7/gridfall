@@ -52,8 +52,8 @@ export function attachBoard(canvas: HTMLCanvasElement): Handle {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#2a3038");
-  scene.fog = new THREE.FogExp2("#2a3038", 0.01);
+  scene.background = new THREE.Color("#1a1e26");
+  scene.fog = new THREE.FogExp2("#1a1e26", 0.008);
   scene.environment = makeDarkEnv(renderer);
   scene.environmentIntensity = 0.75;
 
@@ -153,7 +153,7 @@ function aimCamera(h: Handle, cam: Camera, aspect: number, size: number): void {
   const g = isoToGrid(cam);
   look.set(g.x, 0, g.y);
   const dist = 11 / Math.max(0.7, cam.zoom);
-  h.camera.position.set(look.x + dist, dist * 1.05, look.z + dist);
+  h.camera.position.set(look.x + dist * 1.15, dist * 0.78, look.z + dist * 1.15);
   h.camera.lookAt(look);
   const vh = (size < 13 ? 7.2 : 8.4) / Math.max(0.7, cam.zoom);
   h.camera.left = -vh * aspect * 0.5;
@@ -198,6 +198,10 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
         fogBox.position.y = 0.55;
         fogBox.visible = false;
         mesh.add(fogBox);
+        mesh.add(new THREE.LineSegments(
+          new THREE.EdgesGeometry(geo, 18),
+          new THREE.LineBasicMaterial({ color: "#d0d8e0", transparent: true, opacity: 0.65 }),
+        ));
         h.tiles.add(mesh);
         h.tileMesh.push(mesh);
       }
@@ -215,24 +219,20 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     const check = (x + y) % 2 === 0;
     const mat = mesh.material as THREE.MeshLambertMaterial;
     const pale = explored && t.owner !== null;
-    mat.color.set(pale ? "#5a6068" : check ? "#343a42" : "#2a3038");
+    mat.color.set(pale ? "#7a8088" : check ? "#5a626c" : "#4a525c");
     mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a2430" : "#000");
     mat.emissiveIntensity = explored && (t.terrain === "shelf" || t.terrain === "deep")
       ? 0.08 + Math.sin(tnow * 0.003 + x + y) * 0.02
       : 0;
-    const hgt = pale ? 0.78 : explored ? lookT.h : 0.7;
+    const hgt = pale ? 0.95 : explored ? Math.max(0.82, lookT.h) : 0.88;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
     const capMat = cap.material as THREE.MeshLambertMaterial;
-    let capCol = check ? "#16181c" : "#1e2026";
-    if (explored && t.terrain === "deep") capCol = "#0a141c";
-    else if (explored && t.terrain === "shelf") capCol = "#102028";
-    else if (explored && t.terrain === "forest") capCol = "#142018";
-    else if (explored && t.terrain === "ridge") capCol = "#2a2620";
-    else if (pale) {
+    let capCol = check ? "#0a0c10" : "#3a4048";
+    if (pale) {
       const fac = FACTIONS[state.players[t.owner!].faction];
-      capCol = mixHex("#e6e8ee", fac.color, 0.1);
+      capCol = mixHex("#f2f4f8", fac.color, 0.08);
     }
     capMat.color.set(capCol);
     capMat.emissive.set(cityHere && explored ? (cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff") : "#000");
@@ -356,7 +356,7 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
     const big = u.type === "titan" || u.type === "leviathan";
-    g.scale.setScalar(big ? 2.6 : 2.25);
+    g.scale.setScalar(big ? 2.9 : 2.55);
     const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
     const toward = onCity ? 0.28 : 0.04;
     g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);

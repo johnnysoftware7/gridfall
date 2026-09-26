@@ -79,8 +79,8 @@ function mats(faction: FactionId, color: string) {
   const tint = iceTint(faction);
   return {
     accent,
-    hull: lambert("#4a5058", "#101418", 0.06),
-    dark: lambert("#22262c", "#050608", 0.04),
+    hull: lambert("#6a727c", "#1a2028", 0.08),
+    dark: lambert("#3a4048", "#0c1014", 0.05),
     plate: lambert(color, accent, 0.1),
     visor: lit(accent),
     ice: ice(tint, accent, 0.4),
@@ -347,14 +347,15 @@ export function buildSpire(faction: FactionId, color: string, capital: boolean, 
 
   let y = 0.12;
   for (let i = 0; i < floors; i++) {
-    const fw = w * (1 - i * 0.06);
-    const fh = capital ? 0.22 : 0.18;
-    const storey = box(fw, fh, fw, lambert("#2a323c", m.accent, 0.08), 0, y + fh / 2, -0.06);
+    const fw = w * (1 - i * 0.05);
+    const fh = capital ? 0.26 : 0.22;
+    const storey = box(fw, fh, fw, lambert("#1e262e", m.accent, 0.12), 0, y + fh / 2, -0.06);
     rim(storey);
     g.add(storey);
-    g.add(box(fw * 0.72, 0.035, 0.03, m.visor, 0, y + fh * 0.55, fw * 0.42 - 0.06));
-    g.add(box(fw * 0.72, 0.035, 0.03, m.visor, 0, y + fh * 0.55, -fw * 0.42 - 0.06));
-    y += fh + 0.012;
+    g.add(box(fw * 0.78, 0.045, 0.035, m.visor, 0, y + fh * 0.55, fw * 0.48 - 0.06));
+    g.add(box(fw * 0.78, 0.045, 0.035, m.visor, 0, y + fh * 0.55, -fw * 0.48 - 0.06));
+    g.add(box(0.035, 0.045, fw * 0.78, m.visor, fw * 0.48, y + fh * 0.55, -0.06));
+    y += fh + 0.01;
   }
 
   g.add(crystal(m.core, 0, y + 0.1, -0.06, 0.22, 0.07));

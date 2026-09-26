@@ -216,3 +216,21 @@ Close the gap named in Cycle 8. Spec flavor (glass towers / neon rim) is cosmeti
 **Remaining vs the bar (why this is not 9.0):** Side-by-side, Futuretopia stills are dark metal creatures on thick glossy black/white cubes with a field of orange numbers. Ours still read as a small pale island: the Trooper is a cute faceted biped, not the animal/mech variety in `4b`/`5`; the spire is a cyan shard burst, not a glass tower with night rim and level-readable volumes; tile sides barely show in the headless capture, so the board never becomes that checkerboard of beveled cubes; combat juice is a pair of floats at the top of the frame, not a thick particle field.
 
 ---
+
+## Cycle 10 — 2026-09-26 (REBOOT + cube board)
+
+Product name is REBOOT. Art pass aimed at the 8.3 leftovers vs Futuretopia `3_match_developed` / `4b` / `5` / `4_combat_juice`.
+
+**Play notes (art-pass 01–05):** The board is a full grid of thick 3D cubes — pale owned plate, dark field, visible sides. Starting Trooper is a low dark quadruped, not a standing toy. Novagrid is a teal glass tower with a neon rim. Combat freeze-frame stacks −6/−3/−8/−2/☠. Menu title says REBOOT.
+
+| Axis | Score | Evidence |
+|---|---|---|
+| Graphics | 8.7 | Honest vs the attached Futuretopia stills. The pale-island problem is gone; cubes now share a sport with `3_match_developed`. 9.0 would be a lie: units and cities still lose a close-up side-by-side. |
+| Playability | 8.8 | HUD / marks / helpers unchanged. Brand swap only. |
+| Fun | 8.6 | Stacked combat floats read. Particle field is still a wash, not a square storm. |
+
+**Shipped:** REBOOT user-facing brand; full-map cube grid with bevel edges; class-specific animal/mech silhouettes; glass-tower Command Spires; thicker combat burst + stacked WebGL floats. `artifacts/reboot-gameplay.mp4` (~3:08).
+
+**Remaining vs the bar (why this is not 9.0):** Futuretopia close-ups are dark articulated metal creatures (quadruped, wreckage, crystal walker) on a high-contrast black/white checker with a thick orange number field. Our Trooper is still a small dark hull with stub legs — readable as a walker, not as the `4b`/`5` menagerie. The Command Spire is a single teal tower, not a night-rim cluster of level-readable volumes. Unowned cubes are one dark value, so the board never quite becomes that developed-match checker. Combat numbers stack, but the orange particles read as a pale glow rather than the square burst in `4_combat_juice`.
+
+---
