@@ -58,8 +58,8 @@ export function attachBoard(canvas: HTMLCanvasElement): Handle {
   scene.environmentIntensity = 0.75;
 
   const camera = new THREE.OrthographicCamera(-8, 8, 6, -6, 0.1, 80);
-  scene.add(new THREE.HemisphereLight("#6a9cff", "#100808", 0.38));
-  const dir = new THREE.DirectionalLight("#fff1d6", 1.85);
+  scene.add(new THREE.HemisphereLight("#8ab4ff", "#140808", 0.55));
+  const dir = new THREE.DirectionalLight("#fff4e2", 2.15);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
   dir.shadow.camera.left = -18;
@@ -69,9 +69,12 @@ export function attachBoard(canvas: HTMLCanvasElement): Handle {
   dir.shadow.camera.near = 1;
   dir.shadow.camera.far = 50;
   scene.add(dir);
-  const rim = new THREE.DirectionalLight("#3d7dff", 0.7);
-  rim.position.set(-8, 6, 4);
+  const rim = new THREE.DirectionalLight("#e8f4ff", 1.45);
+  rim.position.set(-6, 4, 8);
   scene.add(rim);
+  const kick = new THREE.DirectionalLight("#5a90ff", 0.7);
+  kick.position.set(8, 3, -4);
+  scene.add(kick);
 
   const tiles = new THREE.Group();
   const props = new THREE.Group();
@@ -150,7 +153,7 @@ function aimCamera(h: Handle, cam: Camera, aspect: number, size: number): void {
   const g = isoToGrid(cam);
   look.set(g.x, 0, g.y);
   const dist = 11 / Math.max(0.7, cam.zoom);
-  h.camera.position.set(look.x + dist, dist * 1.18, look.z + dist);
+  h.camera.position.set(look.x + dist, dist * 1.28, look.z + dist);
   h.camera.lookAt(look);
   const vh = (size < 13 ? 7.2 : 8.4) / Math.max(0.7, cam.zoom);
   h.camera.left = -vh * aspect * 0.5;
@@ -176,14 +179,21 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
         mesh.castShadow = true;
         mesh.userData = { tx: x, ty: y };
         const cap = new THREE.Mesh(
-          new RoundedBoxGeometry(0.88, 0.05, 0.88, 2, 0.06),
+          new RoundedBoxGeometry(0.88, 0.06, 0.88, 2, 0.06),
           physical({ color: "#333", metal: 0.82, rough: 0.1, clearcoat: 1 }),
         );
         cap.receiveShadow = true;
+        cap.add(new THREE.LineSegments(
+          new THREE.EdgesGeometry(cap.geometry, 20),
+          new THREE.LineBasicMaterial({ color: "#d8e8ff", transparent: true, opacity: 0.4 }),
+        ));
         mesh.add(cap);
+        const glint = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), new THREE.MeshBasicMaterial({ color: "#e8f2ff" }));
+        glint.position.set(0.28, 0.56, 0.28);
+        mesh.add(glint);
         const fogBox = new THREE.Mesh(
           new THREE.BoxGeometry(0.96, 0.62, 0.96),
-          physical({ color: "#1a1e28", metal: 0.28, rough: 0.55, opacity: 0.96, emit: "#0c1824", emitInt: 0.06 }),
+          physical({ color: "#3a4454", metal: 0.28, rough: 0.55, opacity: 0.94, emit: "#152030", emitInt: 0.1 }),
         );
         fogBox.position.y = 0.55;
         fogBox.visible = false;
@@ -201,32 +211,34 @@ function syncTiles(h: Handle, state: GameState, pid: PlayerId): void {
     const t = tileAt(state, x, y)!;
     const lookT = terrainLook(t.terrain);
     const explored = p.explored[y * state.size + x];
-    let top = lookT.top;
-    let metalness = lookT.metal;
-    let rough = lookT.rough;
-    if (t.owner !== null && explored) {
-      const fac = FACTIONS[state.players[t.owner].faction];
-      top = mixHex("#8c90a0", fac.color, 0.18);
-      metalness = 0.7;
-      rough = 0.2;
-    }
+    const cityHere = cityAt(state, x, y);
     const mat = mesh.material as THREE.MeshPhysicalMaterial;
-    mat.color.set(explored ? top : "#2a3140");
-    mat.metalness = explored ? metalness : 0.35;
-    mat.roughness = explored ? rough : 0.48;
+    mat.color.set(explored ? lookT.side : "#1c222c");
+    mat.metalness = explored ? lookT.metal : 0.32;
+    mat.roughness = explored ? Math.min(0.55, lookT.rough + 0.12) : 0.5;
     mat.emissive.set(explored && (t.terrain === "shelf" || t.terrain === "deep") ? "#0a3040" : "#000");
     mat.emissiveIntensity = explored && (t.terrain === "shelf" || t.terrain === "deep")
       ? 0.1 + Math.sin(tnow * 0.003 + x + y) * 0.03
       : lookT.emit;
-    const hgt = explored ? lookT.h : 0.62;
+    const hgt = explored ? lookT.h : 0.68;
     mesh.scale.y = hgt;
     mesh.position.set(x, hgt / 2, y);
     const cap = mesh.children[0] as THREE.Mesh;
     const capMat = cap.material as THREE.MeshPhysicalMaterial;
-    capMat.color.set(explored ? mixHex(top, "#e8eef8", 0.28) : "#080a10");
+    let capCol = mixHex(lookT.top, "#e4eaf4", 0.22);
+    if (t.owner !== null && explored) {
+      const fac = FACTIONS[state.players[t.owner].faction];
+      capCol = mixHex("#d4d8e2", fac.color, 0.16);
+    }
+    capMat.color.set(explored ? capCol : "#080a10");
+    capMat.emissive.set(cityHere && explored ? (cityHere.owner !== null ? FACTIONS[state.players[cityHere.owner].faction].color : "#88d4ff") : "#000");
+    capMat.emissiveIntensity = cityHere && explored ? 0.32 : 0;
     cap.position.y = 0.5;
     cap.visible = explored;
-    const fogBox = mesh.children[1] as THREE.Mesh;
+    const glint = mesh.children[1] as THREE.Mesh;
+    glint.visible = explored;
+    glint.position.y = 0.56;
+    const fogBox = mesh.children[2] as THREE.Mesh;
     fogBox.visible = !explored;
     fogBox.position.y = 0.62;
     mesh.visible = true;
@@ -282,9 +294,9 @@ function syncProps(h: Handle, state: GameState, pid: PlayerId): void {
     const city = cityAt(state, t.x, t.y);
     if (city) {
       const fac = city.owner !== null ? FACTIONS[state.players[city.owner].faction] : null;
-      const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital);
-      sp.scale.setScalar(city.isCapital ? 1.85 : 1.4);
-      sp.position.set(t.x, lift, t.y);
+      const sp = buildSpire(fac?.id ?? "helix", fac?.color ?? "#bbb", !!city.isCapital, city.level);
+      sp.scale.setScalar(city.isCapital ? 1.85 : 1.5);
+      sp.position.set(t.x - 0.22, lift, t.y - 0.22);
       h.props.add(sp);
       if (city.monument) {
         const halo = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.03, 8, 22), glow("#f5d76e", 2.2));
@@ -340,10 +352,13 @@ function syncUnits(h: Handle, state: GameState, view: BoardView): void {
     const y = hop ? hop.y : u.y;
     const tile = tileAt(state, Math.round(u.x), Math.round(u.y));
     const lift = tile ? terrainLook(tile.terrain).h : 0.36;
-    g.scale.setScalar(u.type === "titan" || u.type === "leviathan" ? 2.7 : 2.45);
-    g.position.set(x, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y);
+    const big = u.type === "titan" || u.type === "leviathan";
+    g.scale.setScalar(big ? 2.85 : 2.55);
+    const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
+    const toward = onCity ? 0.3 : 0.05;
+    g.position.set(x + toward, lift + 0.02 + (hop ? hop.arc * 0.04 : 0), y + toward);
     const idle = u.owner === view.pid && canAct(u);
-    g.position.y += idle ? Math.sin((fx.now || 0) * 0.006 + u.x) * 0.03 : 0;
+    g.position.y += idle ? Math.sin((fx.now || 0) * 0.006 + u.x) * 0.025 : 0;
     g.visible = true;
   }
   for (const [id, g] of h.units) {
@@ -381,25 +396,52 @@ function syncMarks(h: Handle, view: BoardView): void {
 }
 
 function syncFx(h: Handle): void {
-  h.fxg.clear();
+  while (h.fxg.children.length) {
+    const ch = h.fxg.children[0];
+    h.fxg.remove(ch);
+    if (ch instanceof THREE.Sprite && ch.material instanceof THREE.SpriteMaterial) {
+      ch.material.map?.dispose();
+      ch.material.dispose();
+    }
+  }
   for (const p of fx.particles) {
     const a = Math.max(0, p.life / p.max);
-    if (p.kind === "text") continue;
-    if (p.kind === "skull") {
-      const skull = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), glow(p.color, 2.2 * a));
-      skull.position.set(p.gx + p.x, Math.max(0.4, p.y + 0.4), p.gy + p.z);
-      skull.scale.setScalar(1.1 + (1 - a) * 0.6);
-      h.fxg.add(skull);
+    if (p.kind === "text" || p.kind === "skull") {
+      const spr = glyphSprite(p.text || (p.kind === "skull" ? "☠" : "?"), p.color, a);
+      spr.position.set(p.gx + p.x, Math.max(0.9, p.y + 0.55), p.gy + p.z);
+      spr.scale.setScalar((p.kind === "skull" ? 1.35 : 1.15) * (0.9 + (1 - a) * 0.35));
+      h.fxg.add(spr);
       continue;
     }
-    const mat = glow(p.color, 1.6 * a);
+    const mat = glow(p.color, 1.8 * a);
     const mesh = p.kind === "square"
-      ? new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), mat)
-      : new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), mat);
-    mesh.position.set(p.gx + p.x, Math.max(0.2, p.y), p.gy + p.z);
-    mesh.scale.setScalar(0.85 + a);
+      ? new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.24), mat)
+      : new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), mat);
+    mesh.position.set(p.gx + p.x, Math.max(0.25, p.y), p.gy + p.z);
+    mesh.scale.setScalar(0.9 + a);
     h.fxg.add(mesh);
   }
+}
+
+function glyphSprite(text: string, color: string, alpha: number): THREE.Sprite {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext("2d")!;
+  ctx.clearRect(0, 0, 256, 256);
+  ctx.font = text === "☠" ? "bold 170px system-ui" : "800 150px system-ui";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(0,0,0,0.8)";
+  ctx.lineWidth = 18;
+  ctx.strokeText(text, 128, 136);
+  ctx.fillStyle = color;
+  ctx.fillText(text, 128, 136);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: alpha, depthTest: false });
+  return new THREE.Sprite(mat);
 }
 
 export function drawWorldUi(
@@ -414,7 +456,7 @@ export function drawWorldUi(
   for (const c of state.cities) {
     if (c.owner === null) continue;
     if (!state.players[pid].explored[c.y * state.size + c.x]) continue;
-    const p = projectTile(c.x, c.y, 1.25);
+    const p = projectTile(c.x - 0.22, c.y - 0.22, 1.85);
     if (!p) continue;
     ctx.font = "600 13px system-ui";
     ctx.lineWidth = 4;
@@ -428,7 +470,9 @@ export function drawWorldUi(
     if (u.hidden && u.owner !== pid) continue;
     if (!state.players[pid].explored[u.y * state.size + u.x]) continue;
     const hop = hopAt(u.id);
-    const p = projectTile(hop ? hop.x : u.x, hop ? hop.y : u.y, 1.05);
+    const onCity = !!cityAt(state, Math.round(u.x), Math.round(u.y));
+    const toward = onCity ? 0.3 : 0.05;
+    const p = projectTile((hop ? hop.x : u.x) + toward, (hop ? hop.y : u.y) + toward, 0.85);
     if (!p) continue;
     ctx.fillStyle = "#f4f4f4";
     roundRect(ctx, p.x - 22, p.y - 40, 18, 16, 3);
@@ -444,7 +488,7 @@ export function drawWorldUi(
     const a = Math.max(0, part.life / part.max);
     ctx.globalAlpha = a;
     const dmg = /^-?\d+$/.test(part.text);
-    ctx.font = part.kind === "skull" ? "bold 56px system-ui" : dmg ? "800 48px system-ui" : "bold 26px system-ui";
+    ctx.font = part.kind === "skull" ? "bold 64px system-ui" : dmg ? "800 56px system-ui" : "bold 26px system-ui";
     ctx.strokeStyle = "rgba(0,0,0,0.75)";
     ctx.lineWidth = dmg || part.kind === "skull" ? 7 : 5;
     ctx.strokeText(part.text, p.x, p.y);
