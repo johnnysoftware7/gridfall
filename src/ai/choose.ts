@@ -25,6 +25,19 @@ export function chooseCommands(state: GameState): Command[] {
   let s = cloneState(state);
   const agg = aggression(s);
 
+  // a few docks first so leftover energy is not eaten by research
+  let docks = s.tiles.filter((t) => t.owner === pid && t.building === "dock").length;
+  for (const t of s.tiles) {
+    if (docks >= 4) break;
+    if (t.owner !== pid) continue;
+    const dock = legalTileActions(s, t.x, t.y).find((a) => a.type === "build" && a.kind === "dock");
+    if (dock && current(s).energy >= 7) {
+      cmds.push(dock);
+      s = dispatch(s, dock);
+      docks++;
+    }
+  }
+
   // research
   const tech = bestTech(s);
   if (tech) {
@@ -112,7 +125,7 @@ export function chooseCommands(state: GameState): Command[] {
   }
 
   // train + leftover extra trains for mid-late density
-  const trainPasses = s.turn >= 10 ? 2 : 1;
+  const trainPasses = s.turn >= 6 ? 2 : 1;
   for (let pass = 0; pass < trainPasses; pass++) {
     for (const c of s.cities.filter((c) => c.owner === pid)) {
       if (unitAt(s, c.x, c.y)) continue;
@@ -122,6 +135,15 @@ export function chooseCommands(state: GameState): Command[] {
         cmds.push(cmd);
         s = dispatch(s, cmd);
       }
+    }
+  }
+
+  const extraTech = bestTech(s);
+  if (extraTech) {
+    const cost = researchCost(s, pid, techDef(extraTech).tier);
+    if (current(s).energy >= cost) {
+      cmds.push({ type: "research", tech: extraTech });
+      s = dispatch(s, { type: "research", tech: extraTech });
     }
   }
 
@@ -200,7 +222,14 @@ function pickMove(state: GameState, u: Unit): Command | null {
     const tile = tileAt(state, m.x, m.y);
     if (tile?.ruin) s += 18;
     if (tile?.building === "dock" && tile.owner === u.owner && !hasSkill(u.type, "water") && playerHas(state, u.owner, "aquaculture")) {
-      s += state.turn >= 8 ? 24 : 10;
+      s += state.turn >= 8 && cityCount(state, u.owner) >= 2 ? 44 : 14;
+    }
+    if (!hasSkill(u.type, "water") && playerHas(state, u.owner, "aquaculture") && state.turn >= 6) {
+      for (const dck of state.tiles) {
+        if (dck.building !== "dock" || dck.owner !== u.owner) continue;
+        const d = Math.max(Math.abs(dck.x - m.x), Math.abs(dck.y - m.y));
+        s += 14 / (d + 1);
+      }
     }
     if (hasSkill(u.type, "water")) {
       for (const c of state.cities) {

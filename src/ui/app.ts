@@ -563,12 +563,12 @@ function paintHud(): void {
   const br = appEl.querySelector("#br");
   if (br) {
     br.innerHTML = `
-      <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap">Settings</div></button>
-      <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap">Game Stats</div></button>
-      <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap">Tech Tree</div></button>
+      <button class="round-btn" data-go="settings"><div class="disc">☰</div><div class="cap"><span class="full">Settings</span><span class="short">Set</span></div></button>
+      <button class="round-btn" data-go="stats"><div class="disc dark">◉<span class="rank-badge">${rank}</span></div><div class="cap"><span class="full">Game Stats</span><span class="short">Stats</span></div></button>
+      <button class="round-btn" data-go="tech"><div class="disc">⚗</div><div class="cap"><span class="full">Tech Tree</span><span class="short">Tech</span></div></button>
       <button class="round-btn" id="more"><div class="disc">···</div><div class="cap">More</div></button>
-      <button class="round-btn primary" id="nextunit"><div class="disc">⟳</div><div class="cap">Next Unit</div></button>
-      <button class="round-btn primary ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap">End Turn</div></button>
+      <button class="round-btn primary" id="nextunit"><div class="disc">⟳</div><div class="cap"><span class="full">Next Unit</span><span class="short">Next</span></div></button>
+      <button class="round-btn primary ${idleReady() ? "ready" : ""}" id="endturn"><div class="disc">✓</div><div class="cap"><span class="full">End Turn</span><span class="short">End</span></div></button>
       <div class="more-pop ${ui.moreOpen ? "open" : ""}" id="morepop">
         <button data-go="settings">☰ Settings</button>
         <button data-go="stats">◉ Game Stats</button>
@@ -781,7 +781,7 @@ function runSel(u: Unit, cmd: string): void {
 function paintToasts(): void {
   const el = appEl.querySelector("#toasts");
   if (!el || !ui.game) return;
-  el.innerHTML = ui.game.toasts.slice(-3).map((t) => `<div class="toast"><b>${t.title}</b><span>${t.body}</span></div>`).join("");
+  el.innerHTML = ui.game.toasts.slice(-2).map((t) => `<div class="toast"><b>${t.title}</b><span>${t.body}</span></div>`).join("");
 }
 
 function paintOverlay(): void {
